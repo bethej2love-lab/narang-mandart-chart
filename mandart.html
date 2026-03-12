@@ -1,0 +1,486 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes">
+<title>만다르트 차트 — 이상적인 나</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@400;600;700;900&family=Noto+Sans+KR:wght@300;400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0e0e0f;
+    --surface: #161617;
+    --border: #2a2a2c;
+    --accent: #c8a96e;
+    --accent2: #7eb8c9;
+    --text: #e8e4dc;
+    --text-dim: #888880;
+    --center-bg: #1a1508;
+    --center-border: #c8a96e;
+
+    /* 8 area colors */
+    --c1: #1e1a2e; /* 인성/품격 - deep purple */
+    --c2: #0f1e1a; /* 자기관리/루틴 - dark teal */
+    --c3: #1e1510; /* 독서/지식 - warm brown */
+    --c4: #0d1a10; /* 체력/건강 - forest green */
+    --c5: #1a0f1e; /* 커리어/실력 - deep violet */
+    --c6: #1a1a0a; /* 경제력/재정 - olive */
+    --c7: #0e1a1e; /* 철학/가치관 - slate blue */
+    --c8: #1e100e; /* 창의성/예술 - dark rust */
+
+    --h1: #a08dc8; --h1b: #2a2040;
+    --h2: #6ec8a0; --h2b: #0f2a20;
+    --h3: #c8a96e; --h3b: #2a1e08;
+    --h4: #6ec87a; --h4b: #0f2a18;
+    --h5: #b06ec8; --h5b: #220f2a;
+    --h6: #c8c46e; --h6b: #252208;
+    --h7: #6eb4c8; --h7b: #0a1e2a;
+    --h8: #c87a6e; --h8b: #2a100e;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Noto Sans KR', sans-serif;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 40px 20px 60px;
+  }
+
+  /* Header */
+  .header {
+    text-align: center;
+    margin-bottom: 44px;
+  }
+  .header-sub {
+    font-family: 'Noto Serif KR', serif;
+    font-size: 11px;
+    letter-spacing: 4px;
+    color: var(--accent);
+    text-transform: uppercase;
+    margin-bottom: 12px;
+    opacity: 0.8;
+  }
+  .header h1 {
+    font-family: 'Noto Serif KR', serif;
+    font-size: clamp(26px, 4vw, 38px);
+    font-weight: 900;
+    color: var(--text);
+    letter-spacing: -0.5px;
+    line-height: 1.2;
+  }
+  .header h1 span {
+    color: var(--accent);
+  }
+  .header-line {
+    width: 60px;
+    height: 2px;
+    background: linear-gradient(90deg, transparent, var(--accent), transparent);
+    margin: 16px auto 0;
+  }
+
+  /* Grid wrapper */
+  .mandart-wrapper {
+    width: 100%;
+    max-width: 900px;
+  }
+
+  /* 9x9 grid */
+  .mandart-grid {
+    display: grid;
+    grid-template-columns: repeat(9, 1fr);
+    grid-template-rows: repeat(9, 1fr);
+    gap: 3px;
+    background: #050505;
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    overflow: hidden;
+    aspect-ratio: 1 / 1;
+  }
+
+  .cell {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    padding: 4px;
+    font-size: clamp(7px, 1vw, 11px);
+    line-height: 1.3;
+    font-weight: 400;
+    color: var(--text-dim);
+    background: var(--surface);
+    transition: all 0.2s;
+    cursor: default;
+    word-break: keep-all;
+  }
+
+  .cell:hover {
+    filter: brightness(1.3);
+    z-index: 2;
+    position: relative;
+  }
+
+  /* Sub-area header cells (3x3 block centers = positions of the 8 area titles) */
+  .cell.area-header {
+    font-family: 'Noto Serif KR', serif;
+    font-weight: 700;
+    font-size: clamp(8px, 1.1vw, 12px);
+    color: #fff;
+    letter-spacing: -0.2px;
+  }
+
+  /* Center cell (absolute center of 9x9 = row5, col5) */
+  .cell.center-goal {
+    background: var(--center-bg) !important;
+    border: 1.5px solid var(--center-border);
+    font-family: 'Noto Serif KR', serif;
+    font-weight: 900;
+    font-size: clamp(9px, 1.3vw, 13px);
+    color: var(--accent) !important;
+    letter-spacing: -0.3px;
+    line-height: 1.4;
+    z-index: 3;
+  }
+
+  /* Area 1: 인성/품격 — top-left block (rows 1-3, cols 1-3) */
+  .a1 { background: var(--c1); color: #c4bede; }
+  .a1.area-header { background: var(--h1b); color: var(--h1); }
+
+  /* Area 2: 자기관리/루틴 — top-center block (rows 1-3, cols 4-6) */
+  .a2 { background: var(--c2); color: #b0d4c8; }
+  .a2.area-header { background: var(--h2b); color: var(--h2); }
+
+  /* Area 3: 독서/지식 — top-right block (rows 1-3, cols 7-9) */
+  .a3 { background: var(--c3); color: #d4c4a8; }
+  .a3.area-header { background: var(--h3b); color: var(--h3); }
+
+  /* Area 4: 체력/건강 — middle-left block (rows 4-6, cols 1-3) */
+  .a4 { background: var(--c4); color: #a8d4b0; }
+  .a4.area-header { background: var(--h4b); color: var(--h4); }
+
+  /* CENTER BLOCK: 이상적인 나 (rows 4-6, cols 4-6) */
+  .center-block { background: #111108; color: var(--accent); }
+  .center-block.area-header { background: #1a1508; color: var(--accent); font-size: clamp(7.5px, 1vw, 11px); }
+
+  /* Area 5: 커리어/실력 — middle-right block (rows 4-6, cols 7-9) */
+  .a5 { background: var(--c5); color: #ceb0d4; }
+  .a5.area-header { background: var(--h5b); color: var(--h5); }
+
+  /* Area 6: 경제력/재정 — bottom-left block (rows 7-9, cols 1-3) */
+  .a6 { background: var(--c6); color: #d4d0a0; }
+  .a6.area-header { background: var(--h6b); color: var(--h6); }
+
+  /* Area 7: 철학/가치관 — bottom-center block (rows 7-9, cols 4-6) */
+  .a7 { background: var(--c7); color: #a8ccd4; }
+  .a7.area-header { background: var(--h7b); color: var(--h7); }
+
+  /* Area 8: 창의성/예술 — bottom-right block (rows 7-9, cols 7-9) */
+  .a8 { background: var(--c8); color: #d4b0a8; }
+  .a8.area-header { background: var(--h8b); color: var(--h8); }
+
+  /* Legend */
+  .legend {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 10px;
+    margin-top: 24px;
+    max-width: 900px;
+    width: 100%;
+  }
+  .legend-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 12px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    font-size: 11px;
+  }
+  .legend-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 2px;
+    flex-shrink: 0;
+  }
+  .legend-text { color: var(--text-dim); }
+
+  /* Footer */
+  .footer {
+    margin-top: 32px;
+    text-align: center;
+    font-size: 11px;
+    color: var(--text-dim);
+    opacity: 0.5;
+    letter-spacing: 1px;
+  }
+
+  /* Tab navigation */
+  .tab-nav {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background: #0a0a0b;
+    border-top: 1px solid var(--border);
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    z-index: 100;
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+  .tab-btn {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 8px 4px;
+    gap: 4px;
+    cursor: pointer;
+    border: none;
+    background: transparent;
+    color: var(--text-dim);
+    font-family: 'Noto Sans KR', sans-serif;
+    font-size: 9px;
+    transition: all 0.2s;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .tab-btn:active { opacity: 0.6; }
+  .tab-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 2px;
+  }
+  .tab-btn.active { color: var(--text); }
+
+  @keyframes highlight-pulse {
+    0%   { filter: brightness(1); }
+    40%  { filter: brightness(2.4); }
+    100% { filter: brightness(1); }
+  }
+  .cell.highlighted {
+    animation: highlight-pulse 0.8s ease;
+  }
+
+  body { padding-bottom: 80px; }
+
+  @media (max-width: 600px) {
+    .legend { grid-template-columns: repeat(2, 1fr); }
+    body { padding: 24px 12px 90px; }
+    .header { margin-bottom: 28px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-sub">Mandal-Art Chart</div>
+  <h1><span>이상향</span></h1>
+  <div class="header-line"></div>
+</div>
+
+<div class="mandart-wrapper">
+  <div class="mandart-grid" id="grid"></div>
+
+  <div class="legend">
+    <div class="legend-item"><div class="legend-dot" style="background:var(--h1)"></div><div class="legend-text">인성 / 품격</div></div>
+    <div class="legend-item"><div class="legend-dot" style="background:var(--h2)"></div><div class="legend-text">자기관리 / 루틴</div></div>
+    <div class="legend-item"><div class="legend-dot" style="background:var(--h3)"></div><div class="legend-text">독서 / 지식</div></div>
+    <div class="legend-item"><div class="legend-dot" style="background:var(--h4)"></div><div class="legend-text">체력 / 건강</div></div>
+    <div class="legend-item"><div class="legend-dot" style="background:var(--h5)"></div><div class="legend-text">커리어 / 실력</div></div>
+    <div class="legend-item"><div class="legend-dot" style="background:var(--h6)"></div><div class="legend-text">경제력 / 재정</div></div>
+    <div class="legend-item"><div class="legend-dot" style="background:var(--h7)"></div><div class="legend-text">철학 / 가치관</div></div>
+    <div class="legend-item"><div class="legend-dot" style="background:var(--h8)"></div><div class="legend-text">창의성 / 예술</div></div>
+  </div>
+</div>
+
+<div class="footer">손웅정 정신으로 — 기본에 충실하고, 매일 조금씩</div>
+
+<nav class="tab-nav" id="tabNav"></nav>
+
+<script>
+/*
+  9x9 grid layout:
+  Rows 0-2 (top): A1(cols0-2) | A2(cols3-5) | A3(cols6-8)
+  Rows 3-5 (mid): A4(cols0-2) | CENTER(cols3-5) | A5(cols6-8)
+  Rows 6-8 (bot): A6(cols0-2) | A7(cols3-5) | A8(cols6-8)
+
+  Each 3x3 block: center cell = area title, surrounding 8 = action items
+  CENTER block: center cell = "이상적인 나", surrounding 8 = the 8 area titles
+*/
+
+const areas = [
+  {
+    id: 'a1',
+    title: '인성\n품격',
+    items: ['하루 1번\n감사 표현', '일상에서\n욕설하지 않기', '상대 말\n끊지 않기', '약속 시간\n준수', '인사', '실수 인정하고\n사과하기', '의식적으로\n배려 행동하기', '하루 끝\n3분 성찰'],
+  },
+  {
+    id: 'a2',
+    title: '자기관리\n루틴',
+    items: ['평일 7:30\n주말 9시 기상', '평일 23:30\n주말 1시 폰 내려두기', '할 일\n뽑기 완료', '일\n미루지 않기', '유튜브\n절제', '이부자리\n정리', '주간 회고\n(일요일)', '만다르트 계획\n잊지 않기'],
+  },
+  {
+    id: 'a3',
+    title: '독서\n지식',
+    items: ['매일\n책 읽기', '월 2권\n독서', '분기 1권\n벽돌책 읽기', '독서노트\n작성하기', '매일\nBrilliant 풀기', '영어공부\n앱 학습', '영어 콘텐츠\n하루 1개', '호기심\n깊게 파고들기'],
+  },
+  {
+    id: 'a4',
+    title: '체력\n건강',
+    items: ['매일\n스트레칭', '물 하루\n1리터 이상', '걷기 하루\n8000보 이상', '달리기\n주 10km 이상', '달리기\n월 50km 이상', '음주\n월 5회 제한', '다리 찢기\n노력', '푸시업\n노력'],
+  },
+  {
+    id: 'a5',
+    title: '커리어\n실력',
+    items: ['부기스\n발전', '상담 자격증\n(임상심리사·청소년상담사)', '컴퓨터 자격증\n(컴활·정보처리기사)', '기타 자격증\n(지도사·운용사·중개사)', '노션\n활용', 'AI 활용\n프로젝트 기획', '토익 900\n오픽 AL', '재능기부\n(봉사)'],
+  },
+  {
+    id: 'a6',
+    title: '경제력\n재정',
+    items: ['매일\n시황 파악', '포트폴리오\n월마다 리밸런싱', '소비\n절제', '일희일비\n하지 않기', '분기별 재정\n목표 점검', '복리\n명심', '격월 투자\n책 1권', '매일 투자글\n1편 읽기'],
+  },
+  {
+    id: 'a7',
+    title: '철학\n가치관',
+    items: ['매일\n일기 쓰기', '월 1회\n감상문', '주 1회\n자유글', '욕심\n내지 않기', '원하면\n행동하기', '분기 1권\n철학책 읽기', '손웅정·아이유\n생각하기', 'Dune\n읽기'],
+  },
+  {
+    id: 'a8',
+    title: '창의성\n예술',
+    items: ['음악\n많이 듣기', '월 1회\n전시', '월 영화\n2편', '분기 1번\n극장', '연 3회\n공연', '한 줄\n코멘트', '악기\n연습', '사진·영상\n기록'],
+  },
+];
+
+// Center block surrounding cells = area titles (in reading order: A1 A2 A3 A4 [center] A5 A6 A7 A8)
+// Center block positions in 9x9: rows 3-5, cols 3-5
+// (row3,col3)=A1title (row3,col4)=A2title (row3,col5)=A3title
+// (row4,col3)=A4title (row4,col4)=GOAL    (row4,col5)=A5title
+// (row5,col3)=A6title (row5,col4)=A7title (row5,col5)=A8title
+
+// Build a 9x9 matrix
+const grid = Array.from({length: 9}, () => Array(9).fill(null));
+
+// Helper: fill a 3x3 block at (startRow, startCol) with area data
+function fillBlock(startRow, startCol, area) {
+  // positions within 3x3: center is (1,1) = index 4
+  const positions = [
+    [0,0],[0,1],[0,2],
+    [1,0],[1,1],[1,2],
+    [2,0],[2,1],[2,2]
+  ];
+  // items order: fill surrounding 8 around center
+  // surrounding order: TL T TR L R BL B BR
+  const surrounding = [0,1,2,3,5,6,7,8]; // indices into positions (skip 4=center)
+  positions.forEach(([dr, dc], idx) => {
+    const r = startRow + dr;
+    const c = startCol + dc;
+    if (idx === 4) {
+      grid[r][c] = { text: area.title, cls: area.id + ' area-header' };
+    } else {
+      const itemIdx = surrounding.indexOf(idx);
+      grid[r][c] = { text: area.items[itemIdx], cls: area.id };
+    }
+  });
+}
+
+// Fill the 8 area blocks
+fillBlock(0, 0, areas[0]); // A1: top-left
+fillBlock(0, 3, areas[1]); // A2: top-center
+fillBlock(0, 6, areas[2]); // A3: top-right
+fillBlock(3, 0, areas[3]); // A4: mid-left
+fillBlock(3, 6, areas[4]); // A5: mid-right
+fillBlock(6, 0, areas[5]); // A6: bot-left
+fillBlock(6, 3, areas[6]); // A7: bot-center
+fillBlock(6, 6, areas[7]); // A8: bot-right
+
+// Fill center block (rows 3-5, cols 3-5)
+const centerTitles = areas.map(a => a.title);
+// order: TL=A1, T=A2, TR=A3, L=A4, center=GOAL, R=A5, BL=A6, B=A7, BR=A8
+const centerMap = [
+  [3,3, centerTitles[0], 'center-block area-header'],
+  [3,4, centerTitles[1], 'center-block area-header'],
+  [3,5, centerTitles[2], 'center-block area-header'],
+  [4,3, centerTitles[3], 'center-block area-header'],
+  [4,4, '이상향', 'center-goal'],
+  [4,5, centerTitles[4], 'center-block area-header'],
+  [5,3, centerTitles[5], 'center-block area-header'],
+  [5,4, centerTitles[6], 'center-block area-header'],
+  [5,5, centerTitles[7], 'center-block area-header'],
+];
+centerMap.forEach(([r,c,text,cls]) => {
+  grid[r][c] = { text, cls };
+});
+
+// Render
+const gridEl = document.getElementById('grid');
+const cellEls = []; // store refs by [row][col]
+for (let r = 0; r < 9; r++) {
+  cellEls[r] = [];
+  for (let c = 0; c < 9; c++) {
+    const cell = grid[r][c];
+    const div = document.createElement('div');
+    div.className = 'cell ' + (cell ? cell.cls : '');
+    div.textContent = cell ? cell.text.replace(/\\n/g, '\n') : '';
+    div.style.whiteSpace = 'pre-line';
+    gridEl.appendChild(div);
+    cellEls[r][c] = div;
+  }
+}
+
+// Block positions: [startRow, startCol] for each area (0-indexed)
+const blockPositions = [
+  [0,0], // A1 인성/품격
+  [0,3], // A2 자기관리/루틴
+  [0,6], // A3 독서/지식
+  [3,0], // A4 체력/건강
+  [3,6], // A5 커리어/실력
+  [6,0], // A6 경제력/재정
+  [6,3], // A7 철학/가치관
+  [6,6], // A8 창의성/예술
+];
+
+const areaColors = ['--h1','--h2','--h3','--h4','--h5','--h6','--h7','--h8'];
+const areaLabels = ['인성\n품격','자기관리\n루틴','독서\n지식','체력\n건강','커리어\n실력','경제력\n재정','철학\n가치관','창의성\n예술'];
+
+// Build tab nav
+const tabNav = document.getElementById('tabNav');
+let activeTab = -1;
+
+areas.forEach((area, i) => {
+  const btn = document.createElement('button');
+  btn.className = 'tab-btn';
+  btn.innerHTML = `<div class="tab-dot" style="background:var(${areaColors[i]})"></div><span style="white-space:pre-line;text-align:center">${areaLabels[i]}</span>`;
+  btn.addEventListener('click', () => scrollToBlock(i, btn));
+  tabNav.appendChild(btn);
+});
+
+function scrollToBlock(i, btn) {
+  // Update active tab
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  activeTab = i;
+
+  // Find the center cell of the block
+  const [sr, sc] = blockPositions[i];
+  const centerCell = cellEls[sr + 1][sc + 1]; // center of 3x3 block
+
+  // Scroll to cell
+  centerCell.scrollIntoView({ behavior: 'smooth', block: 'center' });
+
+  // Highlight all cells in the block
+  for (let dr = 0; dr < 3; dr++) {
+    for (let dc = 0; dc < 3; dc++) {
+      const cell = cellEls[sr + dr][sc + dc];
+      cell.classList.remove('highlighted');
+      void cell.offsetWidth; // reflow to restart animation
+      cell.classList.add('highlighted');
+      setTimeout(() => cell.classList.remove('highlighted'), 900);
+    }
+  }
+}
+</script>
+</body>
+</html>
