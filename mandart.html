@@ -485,7 +485,7 @@
         <div class="streak-bar" id="streakBar"></div>
       </div>
       <div class="stat-card">
-        <div class="stat-card-label">TODAY</div>
+        <div class="stat-card-label">getToday()</div>
         <div class="stat-card-value" id="statToday">0 <span>%</span></div>
         <div style="font-size:10px;color:var(--text-dim);margin-top:4px" id="statTodayDetail"></div>
       </div>
@@ -624,7 +624,7 @@ const ct = areas.map(a=>a.title);
 grid[4][4] = { text:'이상향', cls:'center-goal' };
 
 // ── Storage ──
-// TODAY를 함수로 — 자정 지나면 자동으로 새 날짜 반환
+// getToday()를 함수로 — 자정 지나면 자동으로 새 날짜 반환
 function getToday() { return new Date().toISOString().slice(0,10); }
 let TODAY = getToday();
 
@@ -685,15 +685,21 @@ function isLoggable(text, areaIdx, itemIdx) {
 function isClickable(key, cycleDays) {
   const last = clickData[key]?.lastDate;
   if (!last) return true;
-  const diff = (new Date(TODAY) - new Date(last)) / 86400000;
+  // 문자열 날짜 기준으로 정확히 며칠 차이인지 계산 (timezone 문제 방지)
+  const lastD = new Date(last + 'T00:00:00');
+  const todayD = new Date(getToday() + 'T00:00:00');
+  const diff = Math.round((todayD - lastD) / 86400000);
   return diff >= cycleDays;
 }
 function isClickedToday(key, cycleDays) {
   const currentToday = getToday();
   const last = clickData[key]?.lastDate;
   if (!last) return false;
-  const diff = (new Date(currentToday) - new Date(last)) / 86400000;
-  return cycleDays === 1 ? last === currentToday : diff < cycleDays;
+  if (cycleDays === 1) return last === currentToday;
+  const lastD = new Date(last + 'T00:00:00');
+  const todayD = new Date(currentToday + 'T00:00:00');
+  const diff = Math.round((todayD - lastD) / 86400000);
+  return diff < cycleDays;
 }
 function applyBrightness(div, key) {
   const count = clickData[key]?.count || 0;
@@ -702,11 +708,7 @@ function applyBrightness(div, key) {
   div.style.transition = 'filter 0.3s ease';
 }
 function applyBorder(div, key, cycleDays) {
-  const currentToday = getToday(); // 항상 실시간 날짜 참조
-  const last = clickData[key]?.lastDate;
-  if (!last) { div.style.outline = ''; div.style.outlineOffset = ''; return; }
-  const diff = (new Date(currentToday) - new Date(last)) / 86400000;
-  const active = cycleDays === 1 ? last === currentToday : diff < cycleDays;
+  const active = isClickedToday(key, cycleDays);
   if (active) {
     div.style.outline = '1.5px solid rgba(255,255,255,0.85)';
     div.style.outlineOffset = '-1.5px';
@@ -736,7 +738,7 @@ modalOverlay.addEventListener('click', (e) => {
 
 function openModal(cellText, areaId, onSave) {
   modalCellName.textContent = cellText.replace(/\n/g, ' ');
-  modalDate.value = TODAY;
+  modalDate.value = getToday();
   modalComment.value = '';
   modalCallback = (date, comment) => onSave(date, comment);
   modalOverlay.classList.add('open');
@@ -867,7 +869,7 @@ for (let r = 0; r < 9; r++) {
         lastTap = now;
         // 싱글 클릭 → 체크
         if (!isClickable(key, cycleDays)) return;
-        clickData[key] = { count: (clickData[key]?.count||0)+1, lastDate: TODAY };
+        clickData[key] = { count: (clickData[key]?.count||0)+1, lastDate: getToday() };
         saveClicks();
         applyBrightness(div, key);
         applyBorder(div, key, cycleDays);
@@ -1212,9 +1214,9 @@ function isStreakDay(dateStr) {
 // 연속 스트릭 계산 (오늘 포함 과거로 거슬러 올라가며)
 function calcStreak() {
   let streak = 0;
-  const d = new Date(TODAY);
+  const d = new Date(getToday());
   // 오늘 먼저 확인, 안 됐으면 어제부터
-  const startFromYesterday = !isStreakDay(TODAY);
+  const startFromYesterday = !isStreakDay(getToday());
   if (startFromYesterday) d.setDate(d.getDate() - 1);
   while (true) {
     const dateStr = d.toISOString().slice(0, 10);
@@ -1228,11 +1230,11 @@ function calcStreak() {
 // 최근 N일 스트릭 여부 배열
 function getRecentStreakDays(n = 14) {
   const result = [];
-  const d = new Date(TODAY);
+  const d = new Date(getToday());
   for (let i = n - 1; i >= 0; i--) {
     const dd = new Date(d); dd.setDate(dd.getDate() - i);
     const dateStr = dd.toISOString().slice(0, 10);
-    result.push({ dateStr, on: isStreakDay(dateStr), isToday: dateStr === TODAY });
+    result.push({ dateStr, on: isStreakDay(dateStr), isToday: dateStr === getToday() });
   }
   return result;
 }
@@ -1250,15 +1252,15 @@ function getTodayRate() {
 
 // 이번 주 월요일 ~ 오늘
 function getWeekRange() {
-  const d = new Date(TODAY);
+  const d = new Date(getToday());
   const day = d.getDay(); // 0=일
   const mon = new Date(d); mon.setDate(d.getDate() - (day === 0 ? 6 : day - 1));
-  return { start: mon.toISOString().slice(0,10), end: TODAY };
+  return { start: mon.toISOString().slice(0,10), end: getToday() };
 }
 
 // 이번 달 1일 ~ 오늘
 function getMonthRange() {
-  return { start: TODAY.slice(0,8) + '01', end: TODAY };
+  return { start: getToday().slice(0,8) + '01', end: getToday() };
 }
 
 // 기간 내에 체크된 적 있는지
@@ -1292,7 +1294,7 @@ function getItemsForPeriod(period) {
 
 // 영역별 달성률 (기간 기준)
 function getAreaRatesForPeriod(period) {
-  const { start, end } = period === 'week' ? getWeekRange() : period === 'month' ? getMonthRange() : { start: TODAY, end: TODAY };
+  const { start, end } = period === 'week' ? getWeekRange() : period === 'month' ? getMonthRange() : { start: getToday(), end: getToday() };
   const targetCycles = period === 'day' ? [1] : period === 'week' ? [7] : [30, 60, 90, 365];
   return areas.map((area, i) => {
     const [sr, sc] = blockPositions[i];
@@ -1377,7 +1379,7 @@ function renderCommentPanel() {
     streakBar.appendChild(el);
   });
 
-  // TODAY 카드 (일일 기준)
+  // getToday() 카드 (일일 기준)
   const { pct, checked, total } = getTodayRate();
   document.getElementById('statToday').innerHTML = `${pct} <span>%</span>`;
   document.getElementById('statTodayDetail').textContent = `${checked} / ${total} 완료`;
@@ -1404,7 +1406,7 @@ function renderCommentPanel() {
   let cached = null;
   try { cached = JSON.parse(cachedComment); } catch(e) {}
 
-  if (cached && cached.date === TODAY && cached.text) {
+  if (cached && cached.date === getToday() && cached.text) {
     box.className = 'comment-box';
     box.textContent = cached.text;
     btn.textContent = '✦ 다시 받기';
@@ -1497,7 +1499,7 @@ async function generateComment() {
     box.className = 'comment-box';
     box.textContent = text;
     // 오늘 날짜로 캐시 저장
-    localStorage.setItem('mandart_comment_cache', JSON.stringify({ date: TODAY, text }));
+    localStorage.setItem('mandart_comment_cache', JSON.stringify({ date: getToday(), text }));
   } catch(e) {
     box.className = 'comment-box loading';
     box.textContent = '오류가 발생했어요. 다시 시도해봐요.';
@@ -1606,7 +1608,7 @@ function openBlockPopup(areaIdx) {
         }
         lastTapBlock = now;
         if (!isClickable(key, cycleDays)) return;
-        clickData[key] = { count: (clickData[key]?.count||0)+1, lastDate: TODAY };
+        clickData[key] = { count: (clickData[key]?.count||0)+1, lastDate: getToday() };
         saveClicks(); applyState();
         applyBrightness(cellEls[r][c], key);
         applyBorder(cellEls[r][c], key, cycleDays);
