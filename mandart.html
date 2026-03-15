@@ -625,7 +625,10 @@ grid[4][4] = { text:'이상향', cls:'center-goal' };
 
 // ── Storage ──
 // getToday()를 함수로 — 자정 지나면 자동으로 새 날짜 반환
-function getToday() { return new Date().toISOString().slice(0,10); }
+function getToday() {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+}
 let TODAY = getToday();
 
 // 자정 감지: 날짜 바뀌면 페이지 새로고침
