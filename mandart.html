@@ -326,6 +326,22 @@
   .area-stat-bar { height: 100%; border-radius: 2px; transition: width 0.4s ease; }
   .area-stat-pct { font-family: 'IBM Plex Mono', monospace; font-size: 9px; color: var(--text-dim); width: 28px; text-align: right; }
 
+  /* ── 기간 탭 ── */
+  .period-tabs {
+    display: flex; gap: 0;
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 6px; padding: 3px; 
+  }
+  .period-tab {
+    flex: 1; padding: 7px 0; border: none; background: transparent;
+    color: var(--text-dim); font-family: 'IBM Plex Sans KR', sans-serif;
+    font-size: 11px; cursor: pointer; border-radius: 4px;
+    transition: all 0.15s; -webkit-tap-highlight-color: transparent;
+  }
+  .period-tab.active { background: #2a2a2a; color: var(--text); }
+  .period-content { display: none; }
+  .period-content.active { display: flex; flex-direction: column; gap: 12px; }
+
   /* ── 설정 패널 ── */
   .settings-panel {
     display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 110px;
@@ -462,7 +478,7 @@
   <div class="comment-inner">
     <div class="comment-date-label" id="commentDateLabel"></div>
 
-    <!-- 스트릭 + 오늘 달성률 -->
+    <!-- 스트릭 -->
     <div class="stats-row">
       <div class="stat-card streak">
         <div class="stat-card-label">STREAK</div>
@@ -476,16 +492,49 @@
       </div>
     </div>
 
-    <!-- 영역별 달성률 -->
-    <div>
-      <div class="comment-section-label">영역별 달성률</div>
-      <div class="area-stats" id="areaStats"></div>
+    <!-- 기간별 탭 -->
+    <div class="period-tabs">
+      <button class="period-tab active" data-period="day">오늘</button>
+      <button class="period-tab" data-period="week">이번 주</button>
+      <button class="period-tab" data-period="month">이번 달</button>
     </div>
 
-    <div>
-      <div class="comment-section-label">오늘 한 것</div>
-      <div class="comment-checked-list" id="commentCheckedList"></div>
+    <!-- 오늘 -->
+    <div class="period-content active" id="periodDay">
+      <div>
+        <div class="comment-section-label">영역별 달성률</div>
+        <div class="area-stats" id="areaStatsDay"></div>
+      </div>
+      <div>
+        <div class="comment-section-label">오늘 한 것</div>
+        <div class="comment-checked-list" id="checkedListDay"></div>
+      </div>
     </div>
+
+    <!-- 이번 주 -->
+    <div class="period-content" id="periodWeek">
+      <div>
+        <div class="comment-section-label">영역별 달성률</div>
+        <div class="area-stats" id="areaStatsWeek"></div>
+      </div>
+      <div>
+        <div class="comment-section-label">이번 주 한 것</div>
+        <div class="comment-checked-list" id="checkedListWeek"></div>
+      </div>
+    </div>
+
+    <!-- 이번 달 -->
+    <div class="period-content" id="periodMonth">
+      <div>
+        <div class="comment-section-label">영역별 달성률</div>
+        <div class="area-stats" id="areaStatsMonth"></div>
+      </div>
+      <div>
+        <div class="comment-section-label">이번 달 한 것</div>
+        <div class="comment-checked-list" id="checkedListMonth"></div>
+      </div>
+    </div>
+
     <div class="comment-box loading" id="commentBox">버튼을 눌러 오늘 하루를 돌아봐요</div>
     <button class="comment-generate-btn" id="commentGenerateBtn">✦ 오늘 코멘트 받기</button>
   </div>
@@ -1174,30 +1223,131 @@ function getTodayRate() {
   return { pct: Math.round(checked / dailyItems.length * 100), checked, total: dailyItems.length };
 }
 
-// 영역별 달성률 (일일 항목 기준)
-function getAreaRates() {
+// 이번 주 월요일 ~ 오늘
+function getWeekRange() {
+  const d = new Date(TODAY);
+  const day = d.getDay(); // 0=일
+  const mon = new Date(d); mon.setDate(d.getDate() - (day === 0 ? 6 : day - 1));
+  return { start: mon.toISOString().slice(0,10), end: TODAY };
+}
+
+// 이번 달 1일 ~ 오늘
+function getMonthRange() {
+  return { start: TODAY.slice(0,8) + '01', end: TODAY };
+}
+
+// 기간 내에 체크된 적 있는지
+function isCheckedInRange(key, startDate, endDate) {
+  const last = clickData[key]?.lastDate;
+  if (!last) return false;
+  return last >= startDate && last <= endDate;
+}
+
+// 기간별 항목 수집 (cycleDays 필터링)
+function getItemsForPeriod(period) {
+  const { start, end } = period === 'week' ? getWeekRange() : getMonthRange();
+  const targetCycles = period === 'week' ? [7] : [30, 60, 90, 365];
+  const checked = [], unchecked = [];
+
+  for (let r = 0; r < 9; r++) {
+    for (let c = 0; c < 9; c++) {
+      const cell = grid[r][c];
+      if (!cell) continue;
+      if (cell.cls.includes('area-header') || cell.cls.includes('center-goal') || cell.cls.includes('center-block')) continue;
+      const cd = getCycleDays(cell.text);
+      if (!targetCycles.includes(cd)) continue;
+      const key = getCellKey(r, c);
+      const label = cell.text.replace(/\n/g, ' ');
+      const areaId = cell.cls.split(' ')[0];
+      if (isCheckedInRange(key, start, end)) checked.push({ label, areaId });
+      else unchecked.push({ label, areaId });
+    }
+  }
+  return { checked, unchecked, total: checked.length + unchecked.length };
+}
+
+// 영역별 달성률 (기간 기준)
+function getAreaRatesForPeriod(period) {
+  const { start, end } = period === 'week' ? getWeekRange() : period === 'month' ? getMonthRange() : { start: TODAY, end: TODAY };
+  const targetCycles = period === 'day' ? [1] : period === 'week' ? [7] : [30, 60, 90, 365];
+
   return areas.map((area, i) => {
     const [sr, sc] = blockPositions[i];
     let total = 0, checked = 0;
     for (let dr = 0; dr < 3; dr++) for (let dc = 0; dc < 3; dc++) {
       const cell = grid[sr+dr][sc+dc];
       if (!cell || cell.cls.includes('area-header')) continue;
-      if (getCycleDays(cell.text) !== 1) continue;
+      const cd = getCycleDays(cell.text);
+      if (!targetCycles.includes(cd)) continue;
       total++;
-      if (isClickedToday(getCellKey(sr+dr, sc+dc), 1)) checked++;
+      const key = getCellKey(sr+dr, sc+dc);
+      const done = period === 'day'
+        ? isClickedToday(key, 1)
+        : isCheckedInRange(key, start, end);
+      if (done) checked++;
     }
     return { name: areaNames[i], color: areaColorMap[area.id].hcol, pct: total ? Math.round(checked/total*100) : 0, total };
   }).filter(a => a.total > 0);
 }
 
+function renderAreaStats(elId, period) {
+  const el = document.getElementById(elId);
+  el.innerHTML = '';
+  getAreaRatesForPeriod(period).forEach(({ name, color, pct }) => {
+    el.innerHTML += `
+      <div class="area-stat-row">
+        <div class="area-stat-name">${name}</div>
+        <div class="area-stat-bar-wrap">
+          <div class="area-stat-bar" style="width:${pct}%;background:${color}"></div>
+        </div>
+        <div class="area-stat-pct">${pct}%</div>
+      </div>`;
+  });
+}
+
+function renderCheckedList(elId, period) {
+  const el = document.getElementById(elId);
+  el.innerHTML = '';
+
+  if (period === 'day') {
+    for (let r = 0; r < 9; r++) {
+      for (let c = 0; c < 9; c++) {
+        const cell = grid[r][c];
+        if (!cell || cell.cls.includes('area-header') || cell.cls.includes('center-goal') || cell.cls.includes('center-block')) continue;
+        if (getCycleDays(cell.text) !== 1) continue;
+        const key = getCellKey(r, c);
+        if (isClickedToday(key, 1)) {
+          const chip = document.createElement('div');
+          chip.className = 'comment-chip done';
+          chip.textContent = '✓ ' + cell.text.replace(/\n/g, ' ');
+          el.appendChild(chip);
+        }
+      }
+    }
+  } else {
+    const { checked } = getItemsForPeriod(period);
+    checked.forEach(({ label }) => {
+      const chip = document.createElement('div');
+      chip.className = 'comment-chip done';
+      chip.textContent = '✓ ' + label;
+      el.appendChild(chip);
+    });
+  }
+
+  if (!el.children.length) {
+    el.innerHTML = `<div style="font-size:11px;color:var(--text-dim)">아직 체크한 항목이 없어요</div>`;
+  }
+}
+
+let activePeriod = 'day';
+
 function renderCommentPanel() {
-  // 날짜 레이블
   const d = new Date();
   const days = ['일','월','화','수','목','금','토'];
   document.getElementById('commentDateLabel').textContent =
     `${d.getFullYear()}.${String(d.getMonth()+1).padStart(2,'0')}.${String(d.getDate()).padStart(2,'0')} ${days[d.getDay()]}`;
 
-  // ── 스트릭 ──
+  // 스트릭
   const streak = calcStreak();
   document.getElementById('statStreak').innerHTML = `${streak} <span>일 연속</span>`;
   const streakBar = document.getElementById('streakBar');
@@ -1208,53 +1358,31 @@ function renderCommentPanel() {
     streakBar.appendChild(el);
   });
 
-  // ── 오늘 달성률 ──
+  // TODAY 카드 (일일 기준)
   const { pct, checked, total } = getTodayRate();
   document.getElementById('statToday').innerHTML = `${pct} <span>%</span>`;
   document.getElementById('statTodayDetail').textContent = `${checked} / ${total} 완료`;
 
-  // ── 영역별 달성률 ──
-  const areaStatsEl = document.getElementById('areaStats');
-  areaStatsEl.innerHTML = '';
-  getAreaRates().forEach(({ name, color, pct }) => {
-    areaStatsEl.innerHTML += `
-      <div class="area-stat-row">
-        <div class="area-stat-name">${name}</div>
-        <div class="area-stat-bar-wrap">
-          <div class="area-stat-bar" style="width:${pct}%;background:${color}"></div>
-        </div>
-        <div class="area-stat-pct">${pct}%</div>
-      </div>`;
+  // 기간 탭 이벤트
+  document.querySelectorAll('.period-tab').forEach(btn => {
+    btn.onclick = () => {
+      activePeriod = btn.dataset.period;
+      document.querySelectorAll('.period-tab').forEach(b => b.classList.remove('active'));
+      document.querySelectorAll('.period-content').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      document.getElementById('period' + activePeriod.charAt(0).toUpperCase() + activePeriod.slice(1)).classList.add('active');
+      renderPeriodContent(activePeriod);
+    };
   });
-  const checkedList = document.getElementById('commentCheckedList');
-  checkedList.innerHTML = '';
 
-  for (let r = 0; r < 9; r++) {
-    for (let c = 0; c < 9; c++) {
-      const cell = grid[r][c];
-      if (!cell) continue;
-      if (cell.cls.includes('area-header') || cell.cls.includes('center-goal') || cell.cls.includes('center-block')) continue;
-      const key = getCellKey(r, c);
-      const cycleDays = getCycleDays(cell.text);
-      if (isClickedToday(key, cycleDays)) {
-        const chip = document.createElement('div');
-        chip.className = 'comment-chip done';
-        chip.textContent = '✓ ' + cell.text.replace(/\n/g, ' ');
-        checkedList.appendChild(chip);
-      }
-    }
-  }
-
-  if (!checkedList.children.length) {
-    checkedList.innerHTML = '<div style="font-size:11px;color:var(--text-dim)">아직 체크한 항목이 없어요</div>';
-  }
+  // 현재 활성 기간 렌더
+  renderPeriodContent(activePeriod);
 
   // 박스 초기화
   const box = document.getElementById('commentBox');
   box.textContent = '버튼을 눌러 오늘 하루를 돌아봐요';
   box.className = 'comment-box loading';
 
-  // 버튼 이벤트
   const btn = document.getElementById('commentGenerateBtn');
   btn.disabled = false;
   btn.textContent = '✦ 오늘 코멘트 받기';
@@ -1262,9 +1390,8 @@ function renderCommentPanel() {
 
   // 키 재설정 버튼
   const inner = document.querySelector('.comment-inner');
-  let resetRow = document.getElementById('apikeyResetRow');
-  if (!resetRow) {
-    resetRow = document.createElement('div');
+  if (!document.getElementById('apikeyResetRow')) {
+    const resetRow = document.createElement('div');
     resetRow.id = 'apikeyResetRow';
     resetRow.style.cssText = 'text-align:right;';
     resetRow.innerHTML = `<button class="apikey-reset" id="apikeyResetBtn">API 키 재설정</button>`;
@@ -1275,6 +1402,12 @@ function renderCommentPanel() {
       requireApiKey(generateComment);
     });
   }
+}
+
+function renderPeriodContent(period) {
+  const suffix = period.charAt(0).toUpperCase() + period.slice(1);
+  renderAreaStats('areaStats' + suffix, period);
+  renderCheckedList('checkedList' + suffix, period);
 }
 
 async function generateComment() {
