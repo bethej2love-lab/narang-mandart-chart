@@ -936,6 +936,11 @@ async function generateComment() {
       })
     });
     const data = await res.json();
+    if (!res.ok) {
+      box.className = 'comment-box loading';
+      box.textContent = `오류 ${res.status}: ${data.error?.message || JSON.stringify(data)}`;
+      btn.disabled = false; btn.textContent = '✦ 다시 받기'; return;
+    }
     const text = data.content?.[0]?.text || '응답을 받지 못했어요.';
     box.className = 'comment-box';
     box.textContent = text;
