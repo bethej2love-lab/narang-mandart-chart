@@ -287,6 +287,48 @@
   }
   .comment-generate-btn:hover { background: #222; }
   .comment-generate-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+  /* ── API 키 입력 모달 ── */
+  .apikey-overlay {
+    display: none; position: fixed; inset: 0;
+    background: rgba(0,0,0,0.85); z-index: 400;
+    align-items: center; justify-content: center; padding: 24px;
+  }
+  .apikey-overlay.open { display: flex; }
+  .apikey-modal {
+    background: #141415; border: 1px solid var(--border);
+    border-radius: 12px; padding: 24px 20px 28px;
+    width: 100%; max-width: 400px; display: flex; flex-direction: column; gap: 14px;
+  }
+  .apikey-title { font-size: 13px; font-weight: 600; color: var(--text); }
+  .apikey-desc { font-size: 11px; color: var(--text-dim); line-height: 1.7; }
+  .apikey-desc a { color: #6090d0; text-decoration: none; }
+  .apikey-input {
+    width: 100%; background: var(--surface); border: 1px solid var(--border);
+    border-radius: 4px; color: var(--text); font-family: 'IBM Plex Mono', monospace;
+    font-size: 11px; padding: 10px 12px; outline: none;
+  }
+  .apikey-input:focus { border-color: #444; }
+  .apikey-btns { display: flex; gap: 8px; }
+  .apikey-save {
+    flex: 1; padding: 12px; border-radius: 4px; border: none;
+    background: #2a2a2a; color: var(--text);
+    font-family: 'IBM Plex Sans KR', sans-serif; font-size: 12px;
+    font-weight: 500; cursor: pointer;
+  }
+  .apikey-save:hover { background: #333; }
+  .apikey-cancel {
+    padding: 12px 16px; border-radius: 4px;
+    border: 1px solid var(--border); background: transparent;
+    color: var(--text-dim); font-family: 'IBM Plex Sans KR', sans-serif;
+    font-size: 12px; cursor: pointer;
+  }
+  .apikey-saved-row {
+    display: flex; align-items: center; justify-content: space-between;
+    font-size: 10px; color: var(--text-dim);
+  }
+  .apikey-reset { font-size: 10px; color: #555; cursor: pointer; text-decoration: underline; background: none; border: none; }
+  .apikey-reset:hover { color: #888; }
 </style>
 </head>
 <body>
@@ -303,6 +345,24 @@
 </div>
 
 <div class="footer" id="footer">모든 것은 기본에서 시작된다</div>
+
+<!-- API 키 입력 모달 -->
+<div class="apikey-overlay" id="apikeyOverlay">
+  <div class="apikey-modal">
+    <div class="apikey-title">Anthropic API 키 입력</div>
+    <div class="apikey-desc">
+      키는 이 기기의 브라우저에만 저장돼요.<br>
+      파일에 저장되지 않아 public 레포에서도 안전해요.<br><br>
+      키 발급: <a href="https://console.anthropic.com" target="_blank">console.anthropic.com</a>
+      → API Keys → Create Key
+    </div>
+    <input class="apikey-input" id="apikeyInput" type="password" placeholder="sk-ant-api03-...">
+    <div class="apikey-btns">
+      <button class="apikey-cancel" id="apikeyCancel">취소</button>
+      <button class="apikey-save" id="apikeySave">저장하고 시작하기</button>
+    </div>
+  </div>
+</div>
 
 <!-- AI 코멘트 패널 -->
 <div class="comment-panel" id="commentPanel">
@@ -360,6 +420,12 @@
 <nav class="tab-nav" id="tabNav"></nav>
 
 <script>
+// ── API 키 관리 (localStorage) ──
+let ANTHROPIC_API_KEY = localStorage.getItem('mandart_api_key') || '';
+
+function getApiKey() { return localStorage.getItem('mandart_api_key') || ''; }
+function saveApiKey(key) { localStorage.setItem('mandart_api_key', key.trim()); ANTHROPIC_API_KEY = key.trim(); }
+
 const areas = [
   { id: 'a1', title: '인성\n품격', items: ['하루 1번\n감사 표현', '일상에서\n욕설하지\n않기', '상대 말\n끊지 않기', '약속 시간\n준수', '인사', '실수\n인정하고\n사과하기', '의식적으로\n배려\n행동하기', '하루 끝\n3분 성찰'] },
   { id: 'a2', title: '자기관리\n루틴', items: ['평일 7:30\n주말 9시 기상', '평일 23:30\n주말 1시\n폰 내려두기', '할 일\n뽑기 완료', '일\n미루지 않기', '유튜브\n절제', '이부자리\n정리', '주간 회고\n(일요일)', '만다르트 계획\n잊지 않기'] },
@@ -730,6 +796,36 @@ tabNav.appendChild(tabRow2);
 document.body.style.paddingBottom = '110px';
 logPanel.style.bottom = '110px';
 
+// ── API 키 모달 ──
+const apikeyOverlay = document.getElementById('apikeyOverlay');
+const apikeyInput = document.getElementById('apikeyInput');
+let apikeyCallback = null;
+
+document.getElementById('apikeySave').addEventListener('click', () => {
+  const key = apikeyInput.value.trim();
+  if (!key.startsWith('sk-')) {
+    apikeyInput.style.borderColor = '#c04040';
+    return;
+  }
+  apikeyInput.style.borderColor = '';
+  saveApiKey(key);
+  apikeyOverlay.classList.remove('open');
+  if (apikeyCallback) { apikeyCallback(); apikeyCallback = null; }
+});
+document.getElementById('apikeyCancel').addEventListener('click', () => {
+  apikeyOverlay.classList.remove('open');
+  apikeyCallback = null;
+});
+
+function requireApiKey(onReady) {
+  const key = getApiKey();
+  if (key && key.startsWith('sk-')) { onReady(); return; }
+  apikeyInput.value = '';
+  apikeyCallback = onReady;
+  apikeyOverlay.classList.add('open');
+  setTimeout(() => apikeyInput.focus(), 300);
+}
+
 // ── AI 코멘트 ──
 function renderCommentPanel() {
   // 날짜 레이블
@@ -741,8 +837,6 @@ function renderCommentPanel() {
   // 오늘 체크한 항목 수집
   const checkedList = document.getElementById('commentCheckedList');
   checkedList.innerHTML = '';
-  const checkedItems = [];
-  const uncheckedItems = [];
 
   for (let r = 0; r < 9; r++) {
     for (let c = 0; c < 9; c++) {
@@ -751,24 +845,20 @@ function renderCommentPanel() {
       if (cell.cls.includes('area-header') || cell.cls.includes('center-goal') || cell.cls.includes('center-block')) continue;
       const key = getCellKey(r, c);
       const cycleDays = getCycleDays(cell.text);
-      const label = cell.text.replace(/\n/g, ' ');
       if (isClickedToday(key, cycleDays)) {
-        checkedItems.push(label);
         const chip = document.createElement('div');
         chip.className = 'comment-chip done';
-        chip.textContent = '✓ ' + label;
+        chip.textContent = '✓ ' + cell.text.replace(/\n/g, ' ');
         checkedList.appendChild(chip);
-      } else {
-        uncheckedItems.push(label);
       }
     }
   }
 
-  if (checkedItems.length === 0) {
+  if (!checkedList.children.length) {
     checkedList.innerHTML = '<div style="font-size:11px;color:var(--text-dim)">아직 체크한 항목이 없어요</div>';
   }
 
-  // 버튼 상태 초기화
+  // 박스 초기화
   const box = document.getElementById('commentBox');
   box.textContent = '버튼을 눌러 오늘 하루를 돌아봐요';
   box.className = 'comment-box loading';
@@ -776,13 +866,51 @@ function renderCommentPanel() {
   // 버튼 이벤트
   const btn = document.getElementById('commentGenerateBtn');
   btn.disabled = false;
-  btn.onclick = async () => {
-    btn.disabled = true;
-    btn.textContent = '생성 중...';
-    box.className = 'comment-box loading';
-    box.textContent = '잠깐, 오늘 하루 살펴보는 중...';
-    try {
-      const prompt = `너는 손웅정 감독처럼 직설적이고 따뜻한 멘토야. 아래는 내가 오늘 이상향을 향해 체크한 만다르트 항목이야.
+  btn.textContent = '✦ 오늘 코멘트 받기';
+  btn.onclick = () => requireApiKey(generateComment);
+
+  // 키 재설정 버튼
+  const inner = document.querySelector('.comment-inner');
+  let resetRow = document.getElementById('apikeyResetRow');
+  if (!resetRow) {
+    resetRow = document.createElement('div');
+    resetRow.id = 'apikeyResetRow';
+    resetRow.style.cssText = 'text-align:right;';
+    resetRow.innerHTML = `<button class="apikey-reset" id="apikeyResetBtn">API 키 재설정</button>`;
+    inner.appendChild(resetRow);
+    document.getElementById('apikeyResetBtn').addEventListener('click', () => {
+      localStorage.removeItem('mandart_api_key');
+      ANTHROPIC_API_KEY = '';
+      requireApiKey(generateComment);
+    });
+  }
+}
+
+async function generateComment() {
+  const box = document.getElementById('commentBox');
+  const btn = document.getElementById('commentGenerateBtn');
+  btn.disabled = true;
+  btn.textContent = '생성 중...';
+  box.className = 'comment-box loading';
+  box.textContent = '잠깐, 오늘 하루 살펴보는 중...';
+
+  const checkedItems = [];
+  const uncheckedItems = [];
+  for (let r = 0; r < 9; r++) {
+    for (let c = 0; c < 9; c++) {
+      const cell = grid[r][c];
+      if (!cell) continue;
+      if (cell.cls.includes('area-header') || cell.cls.includes('center-goal') || cell.cls.includes('center-block')) continue;
+      const key = getCellKey(r, c);
+      const cycleDays = getCycleDays(cell.text);
+      const label = cell.text.replace(/\n/g, ' ');
+      if (isClickedToday(key, cycleDays)) checkedItems.push(label);
+      else uncheckedItems.push(label);
+    }
+  }
+
+  try {
+    const prompt = `너는 손웅정 감독처럼 직설적이고 따뜻한 멘토야. 아래는 내가 오늘 이상향을 향해 체크한 만다르트 항목이야.
 
 오늘 한 것 (${checkedItems.length}개): ${checkedItems.length ? checkedItems.join(', ') : '없음'}
 오늘 못 한 것 중 일부: ${uncheckedItems.slice(0,6).join(', ')}
@@ -793,26 +921,30 @@ function renderCommentPanel() {
 - 손웅정 스타일: 짧고 묵직하게
 - 반드시 한국어로, 이모지 없이`;
 
-      const res = await fetch('https://api.anthropic.com/v1/messages', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          model: 'claude-sonnet-4-20250514',
-          max_tokens: 1000,
-          messages: [{ role: 'user', content: prompt }]
-        })
-      });
-      const data = await res.json();
-      const text = data.content?.[0]?.text || '응답을 받지 못했어요.';
-      box.className = 'comment-box';
-      box.textContent = text;
-    } catch(e) {
-      box.className = 'comment-box loading';
-      box.textContent = '오류가 발생했어요. 다시 시도해봐요.';
-    }
-    btn.disabled = false;
-    btn.textContent = '✦ 다시 받기';
-  };
+    const res = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': getApiKey(),
+        'anthropic-version': '2023-06-01',
+        'anthropic-dangerous-direct-browser-access': 'true'
+      },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 1000,
+        messages: [{ role: 'user', content: prompt }]
+      })
+    });
+    const data = await res.json();
+    const text = data.content?.[0]?.text || '응답을 받지 못했어요.';
+    box.className = 'comment-box';
+    box.textContent = text;
+  } catch(e) {
+    box.className = 'comment-box loading';
+    box.textContent = '오류가 발생했어요. 다시 시도해봐요.';
+  }
+  btn.disabled = false;
+  btn.textContent = '✦ 다시 받기';
 }
 
 // ── 블록 확대 팝업 ──
