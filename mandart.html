@@ -94,6 +94,7 @@
 
   .footer {
     margin-top: 24px;
+    margin-bottom: 20px;
     font-family: 'IBM Plex Mono', monospace;
     font-size: 9px; color: var(--text-dim); opacity: 0.35;
     letter-spacing: 0.5px;
@@ -694,24 +695,7 @@ areas.forEach((area, i) => {
   i < 5 ? tabRow1.appendChild(btn) : tabRow2.appendChild(btn);
 });
 
-// 빈칸
-const empty = document.createElement('div');
-tabRow2.appendChild(empty);
-
-// 기록 탭
-const logBtn = document.createElement('button');
-logBtn.className = 'tab-btn';
-logBtn.innerHTML = `<div style="width:5px;height:5px;border-radius:50%;background:#555"></div><span style="font-size:8px">기록</span>`;
-logBtn.addEventListener('click', () => {
-  commentPanelOpen = false; commentPanel.classList.remove('open');
-  logPanelOpen = !logPanelOpen;
-  logPanel.classList.toggle('open', logPanelOpen);
-  document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
-  if (logPanelOpen) { logBtn.classList.add('active'); buildFilter(); renderLogs(); }
-});
-tabRow2.appendChild(logBtn);
-
-// 코멘트 탭
+// 빈칸 자리에 코멘트 탭
 const commentPanel = document.getElementById('commentPanel');
 let commentPanelOpen = false;
 const commentBtn = document.createElement('button');
@@ -725,6 +709,19 @@ commentBtn.addEventListener('click', () => {
   if (commentPanelOpen) { commentBtn.classList.add('active'); renderCommentPanel(); }
 });
 tabRow2.appendChild(commentBtn);
+
+// 기록 탭
+const logBtn = document.createElement('button');
+logBtn.className = 'tab-btn';
+logBtn.innerHTML = `<div style="width:5px;height:5px;border-radius:50%;background:#555"></div><span style="font-size:8px">기록</span>`;
+logBtn.addEventListener('click', () => {
+  commentPanelOpen = false; commentPanel.classList.remove('open');
+  logPanelOpen = !logPanelOpen;
+  logPanel.classList.toggle('open', logPanelOpen);
+  document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
+  if (logPanelOpen) { logBtn.classList.add('active'); buildFilter(); renderLogs(); }
+});
+tabRow2.appendChild(logBtn);
 
 tabNav.appendChild(tabRow1);
 tabNav.appendChild(tabRow2);
