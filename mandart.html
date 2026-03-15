@@ -92,7 +92,19 @@
   @keyframes pulse { 0% { filter: brightness(1); } 45% { filter: brightness(2.5); } 100% { filter: brightness(1); } }
   .cell.highlighted { animation: pulse 0.65s ease; }
 
-  .footer { margin-top: 24px; font-family: 'IBM Plex Mono', monospace; font-size: 9px; color: var(--text-dim); opacity: 0.35; letter-spacing: 0.5px; }
+  .footer {
+    margin-top: 24px;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 9px; color: var(--text-dim); opacity: 0.35;
+    letter-spacing: 0.5px;
+    width: 100%; text-align: center;
+  }
+  .today-date {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 9px; color: var(--text-dim);
+    letter-spacing: 1.5px; opacity: 0.5;
+    text-align: center; margin-bottom: 10px;
+  }
 
   /* ── Tab nav ── */
   .tab-nav {
@@ -180,6 +192,100 @@
   .modal-btn.confirm { background: #2a2a2a; color: var(--text); }
   .modal-btn.confirm:hover { background: #333; }
   .modal-btn.cancel { background: transparent; color: var(--text-dim); border: 1px solid var(--border); }
+
+  /* ── 블록 확대 팝업 ── */
+  .block-overlay {
+    display: none; position: fixed; inset: 0;
+    background: rgba(0,0,0,0.82); z-index: 300;
+    align-items: center; justify-content: center;
+    padding: 20px;
+  }
+  .block-overlay.open { display: flex; }
+  .block-popup {
+    background: #111112; border: 1px solid var(--border);
+    border-radius: 10px; width: 100%; max-width: 380px;
+    padding: 20px; display: flex; flex-direction: column; gap: 14px;
+  }
+  .block-popup-header {
+    display: flex; align-items: center; justify-content: space-between;
+  }
+  .block-popup-title { font-size: 14px; font-weight: 600; color: #e8e8e8; letter-spacing: -0.4px; }
+  .block-popup-close { border: none; background: transparent; color: var(--text-dim); font-size: 20px; cursor: pointer; padding: 0 4px; line-height: 1; }
+  .block-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
+  .block-cell {
+    border-radius: 6px; padding: 12px 6px;
+    display: flex; align-items: center; justify-content: center;
+    text-align: center; font-family: 'IBM Plex Sans KR', sans-serif;
+    font-size: 12px; font-weight: 400; line-height: 1.4;
+    cursor: pointer; min-height: 68px;
+    transition: filter 0.15s, transform 0.1s;
+    word-break: keep-all; position: relative;
+    -webkit-tap-highlight-color: transparent;
+    user-select: none;
+  }
+  .block-cell:active { transform: scale(0.95); }
+  .block-cell.center-cell { font-weight: 600; font-size: 13px; cursor: default; }
+  .block-cell.checked { outline: 2px solid rgba(255,255,255,0.9); outline-offset: -2px; }
+  .block-cell.locked { opacity: 0.4; cursor: not-allowed; }
+  .block-popup-hint { font-size: 10px; color: var(--text-dim); text-align: center; font-family: 'IBM Plex Mono', monospace; }
+  .block-nav { display: flex; align-items: center; justify-content: space-between; }
+  .block-nav-btn {
+    border: none; background: transparent; color: var(--text-dim);
+    font-size: 20px; cursor: pointer; padding: 4px 8px; line-height: 1;
+    -webkit-tap-highlight-color: transparent; transition: color 0.15s;
+  }
+  .block-nav-btn:hover { color: var(--text); }
+  .block-nav-btn:disabled { opacity: 0.15; cursor: default; }
+  /* 기록 가능 표시 */
+  .block-cell .log-dot {
+    position: absolute; top: 5px; right: 6px;
+    width: 4px; height: 4px; border-radius: 50%;
+    background: rgba(255,255,255,0.3);
+  }
+
+  /* ── AI 코멘트 패널 ── */
+  .comment-panel {
+    display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 110px;
+    background: var(--bg); z-index: 90; overflow-y: auto;
+    padding: 28px 20px 20px;
+    flex-direction: column; align-items: center; justify-content: center;
+  }
+  .comment-panel.open { display: flex; }
+  .comment-inner { width: 100%; max-width: 480px; display: flex; flex-direction: column; gap: 20px; }
+  .comment-date-label {
+    font-family: 'IBM Plex Mono', monospace; font-size: 9px;
+    color: var(--text-dim); letter-spacing: 2px; text-align: center;
+  }
+  .comment-box {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 8px; padding: 22px 20px;
+    font-size: 14px; font-weight: 400; line-height: 1.8;
+    color: var(--text); min-height: 80px;
+    white-space: pre-wrap; letter-spacing: -0.2px;
+  }
+  .comment-box.loading { color: var(--text-dim); font-size: 12px; font-family: 'IBM Plex Mono', monospace; }
+  .comment-checked-list {
+    display: flex; flex-wrap: wrap; gap: 6px;
+  }
+  .comment-chip {
+    padding: 4px 10px; border-radius: 20px;
+    background: var(--surface); border: 1px solid var(--border);
+    font-size: 10px; color: var(--text-dim);
+  }
+  .comment-chip.done { border-color: #333; color: #888; }
+  .comment-section-label {
+    font-size: 10px; color: var(--text-dim); margin-bottom: 6px;
+    font-family: 'IBM Plex Mono', monospace; letter-spacing: 1px;
+  }
+  .comment-generate-btn {
+    width: 100%; padding: 14px; border-radius: 6px;
+    border: 1px solid #333; background: #181818;
+    color: var(--text); font-family: 'IBM Plex Sans KR', sans-serif;
+    font-size: 12px; font-weight: 500; cursor: pointer;
+    transition: background 0.15s; -webkit-tap-highlight-color: transparent;
+  }
+  .comment-generate-btn:hover { background: #222; }
+  .comment-generate-btn:disabled { opacity: 0.4; cursor: not-allowed; }
 </style>
 </head>
 <body>
@@ -189,18 +295,49 @@
   <h1><span>이상향</span></h1>
   <div class="header-line"></div>
 </div>
+<div class="today-date" id="todayDate"></div>
 
 <div class="mandart-wrapper">
   <div class="mandart-grid" id="grid"></div>
 </div>
 
-<div class="footer">기본에 충실하고, 매일 조금씩</div>
+<div class="footer" id="footer">모든 것은 기본에서 시작된다</div>
+
+<!-- AI 코멘트 패널 -->
+<div class="comment-panel" id="commentPanel">
+  <div class="comment-inner">
+    <div class="comment-date-label" id="commentDateLabel"></div>
+    <div>
+      <div class="comment-section-label">오늘 한 것</div>
+      <div class="comment-checked-list" id="commentCheckedList"></div>
+    </div>
+    <div class="comment-box loading" id="commentBox">버튼을 눌러 오늘 하루를 돌아봐요</div>
+    <button class="comment-generate-btn" id="commentGenerateBtn">✦ 오늘 코멘트 받기</button>
+  </div>
+</div>
 
 <!-- 기록 패널 -->
 <div class="log-panel" id="logPanel">
   <div class="log-panel-title">기록</div>
   <div class="log-filter" id="logFilter"></div>
   <div class="log-list" id="logList"></div>
+</div>
+
+<!-- 블록 확대 팝업 -->
+<div class="block-overlay" id="blockOverlay">
+  <div class="block-popup">
+    <div class="block-popup-header">
+      <div class="block-popup-title" id="blockPopupTitle"></div>
+      <button class="block-popup-close" id="blockPopupClose">×</button>
+    </div>
+    <div class="block-nav">
+      <button class="block-nav-btn" id="blockPrev">‹</button>
+      <div style="font-size:9px;color:var(--text-dim);font-family:'IBM Plex Mono',monospace" id="blockNavIndex"></div>
+      <button class="block-nav-btn" id="blockNext">›</button>
+    </div>
+    <div class="block-grid" id="blockGrid"></div>
+    <div class="block-popup-hint">탭 → 체크 · 두 번 탭 → 취소 · 길게 → 기록</div>
+  </div>
 </div>
 
 <!-- 기록 입력 모달 -->
@@ -256,6 +393,14 @@ grid[4][4] = { text:'이상향', cls:'center-goal' };
 
 // ── Storage ──
 const TODAY = new Date().toISOString().slice(0,10);
+
+// 날짜 표기
+const dateEl = document.getElementById('todayDate');
+if (dateEl) {
+  const d = new Date();
+  const days = ['일','월','화','수','목','금','토'];
+  dateEl.textContent = `${d.getFullYear()}.${String(d.getMonth()+1).padStart(2,'0')}.${String(d.getDate()).padStart(2,'0')} ${days[d.getDay()]}`;
+}
 let clickData = {};
 let logData = []; // [{ key, cellText, areaId, date, comment }]
 
@@ -407,6 +552,16 @@ for (let r = 0; r < 9; r++) {
 
     const interactive = cell && !cell.cls.includes('center-goal') && !cell.cls.includes('area-header') && !cell.cls.includes('center-block');
 
+    // area-header 클릭 → 블록 확대 팝업
+    if (cell && cell.cls.includes('area-header') && !cell.cls.includes('center-block')) {
+      div.style.cursor = 'pointer';
+      const areaId = cell.cls.split(' ')[0];
+      const areaIdx = areas.findIndex(a => a.id === areaId);
+      div.addEventListener('click', () => {
+        if (areaIdx >= 0) openBlockPopup(areaIdx);
+      });
+    }
+
     if (interactive) {
       const key = getCellKey(r,c);
       const cycleDays = getCycleDays(cell.text);
@@ -415,6 +570,14 @@ for (let r = 0; r < 9; r++) {
       div.style.cursor = 'pointer';
       applyBrightness(div, key);
       applyBorder(div, key, cycleDays);
+
+      // 기록 가능 셀에 dot 표시
+      if (loggable) {
+        const dot = document.createElement('div');
+        dot.style.cssText = 'position:absolute;top:3px;right:3px;width:3px;height:3px;border-radius:50%;background:rgba(255,255,255,0.25);pointer-events:none;';
+        div.style.position = 'relative';
+        div.appendChild(dot);
+      }
 
       // 더블탭/더블클릭 취소
       const undoClick = () => {
@@ -540,16 +703,28 @@ const logBtn = document.createElement('button');
 logBtn.className = 'tab-btn';
 logBtn.innerHTML = `<div style="width:5px;height:5px;border-radius:50%;background:#555"></div><span style="font-size:8px">기록</span>`;
 logBtn.addEventListener('click', () => {
+  commentPanelOpen = false; commentPanel.classList.remove('open');
   logPanelOpen = !logPanelOpen;
   logPanel.classList.toggle('open', logPanelOpen);
   document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
-  if (logPanelOpen) {
-    logBtn.classList.add('active');
-    buildFilter();
-    renderLogs();
-  }
+  if (logPanelOpen) { logBtn.classList.add('active'); buildFilter(); renderLogs(); }
 });
 tabRow2.appendChild(logBtn);
+
+// 코멘트 탭
+const commentPanel = document.getElementById('commentPanel');
+let commentPanelOpen = false;
+const commentBtn = document.createElement('button');
+commentBtn.className = 'tab-btn';
+commentBtn.innerHTML = `<div style="font-size:10px;line-height:1">✦</div><span style="font-size:8px">코멘트</span>`;
+commentBtn.addEventListener('click', () => {
+  logPanelOpen = false; logPanel.classList.remove('open');
+  commentPanelOpen = !commentPanelOpen;
+  commentPanel.classList.toggle('open', commentPanelOpen);
+  document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
+  if (commentPanelOpen) { commentBtn.classList.add('active'); renderCommentPanel(); }
+});
+tabRow2.appendChild(commentBtn);
 
 tabNav.appendChild(tabRow1);
 tabNav.appendChild(tabRow2);
@@ -557,6 +732,223 @@ tabNav.appendChild(tabRow2);
 // 탭 두 줄이니 패딩 조정
 document.body.style.paddingBottom = '110px';
 logPanel.style.bottom = '110px';
+
+// ── AI 코멘트 ──
+function renderCommentPanel() {
+  // 날짜 레이블
+  const d = new Date();
+  const days = ['일','월','화','수','목','금','토'];
+  document.getElementById('commentDateLabel').textContent =
+    `${d.getFullYear()}.${String(d.getMonth()+1).padStart(2,'0')}.${String(d.getDate()).padStart(2,'0')} ${days[d.getDay()]}`;
+
+  // 오늘 체크한 항목 수집
+  const checkedList = document.getElementById('commentCheckedList');
+  checkedList.innerHTML = '';
+  const checkedItems = [];
+  const uncheckedItems = [];
+
+  for (let r = 0; r < 9; r++) {
+    for (let c = 0; c < 9; c++) {
+      const cell = grid[r][c];
+      if (!cell) continue;
+      if (cell.cls.includes('area-header') || cell.cls.includes('center-goal') || cell.cls.includes('center-block')) continue;
+      const key = getCellKey(r, c);
+      const cycleDays = getCycleDays(cell.text);
+      const label = cell.text.replace(/\n/g, ' ');
+      if (isClickedToday(key, cycleDays)) {
+        checkedItems.push(label);
+        const chip = document.createElement('div');
+        chip.className = 'comment-chip done';
+        chip.textContent = '✓ ' + label;
+        checkedList.appendChild(chip);
+      } else {
+        uncheckedItems.push(label);
+      }
+    }
+  }
+
+  if (checkedItems.length === 0) {
+    checkedList.innerHTML = '<div style="font-size:11px;color:var(--text-dim)">아직 체크한 항목이 없어요</div>';
+  }
+
+  // 버튼 상태 초기화
+  const box = document.getElementById('commentBox');
+  box.textContent = '버튼을 눌러 오늘 하루를 돌아봐요';
+  box.className = 'comment-box loading';
+
+  // 버튼 이벤트
+  const btn = document.getElementById('commentGenerateBtn');
+  btn.disabled = false;
+  btn.onclick = async () => {
+    btn.disabled = true;
+    btn.textContent = '생성 중...';
+    box.className = 'comment-box loading';
+    box.textContent = '잠깐, 오늘 하루 살펴보는 중...';
+    try {
+      const prompt = `너는 손웅정 감독처럼 직설적이고 따뜻한 멘토야. 아래는 내가 오늘 이상향을 향해 체크한 만다르트 항목이야.
+
+오늘 한 것 (${checkedItems.length}개): ${checkedItems.length ? checkedItems.join(', ') : '없음'}
+오늘 못 한 것 중 일부: ${uncheckedItems.slice(0,6).join(', ')}
+
+위를 바탕으로 딱 2~3문장으로 코멘트를 남겨줘.
+- 잘 한 것은 인정하되 과하게 칭찬하지 말 것
+- 못 한 것 중 1~2개를 골라 구체적으로 독려할 것
+- 손웅정 스타일: 짧고 묵직하게
+- 반드시 한국어로, 이모지 없이`;
+
+      const res = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          model: 'claude-sonnet-4-20250514',
+          max_tokens: 1000,
+          messages: [{ role: 'user', content: prompt }]
+        })
+      });
+      const data = await res.json();
+      const text = data.content?.[0]?.text || '응답을 받지 못했어요.';
+      box.className = 'comment-box';
+      box.textContent = text;
+    } catch(e) {
+      box.className = 'comment-box loading';
+      box.textContent = '오류가 발생했어요. 다시 시도해봐요.';
+    }
+    btn.disabled = false;
+    btn.textContent = '✦ 다시 받기';
+  };
+}
+
+// ── 블록 확대 팝업 ──
+const blockOverlay = document.getElementById('blockOverlay');
+const blockGridEl  = document.getElementById('blockGrid');
+const blockPopupTitle = document.getElementById('blockPopupTitle');
+const blockNavIndex = document.getElementById('blockNavIndex');
+const blockPrevBtn = document.getElementById('blockPrev');
+const blockNextBtn = document.getElementById('blockNext');
+let currentBlockIdx = 0;
+
+document.getElementById('blockPopupClose').addEventListener('click', () => blockOverlay.classList.remove('open'));
+blockOverlay.addEventListener('click', (e) => { if (e.target === blockOverlay) blockOverlay.classList.remove('open'); });
+blockPrevBtn.addEventListener('click', () => { if (currentBlockIdx > 0) openBlockPopup(currentBlockIdx - 1); });
+blockNextBtn.addEventListener('click', () => { if (currentBlockIdx < areas.length - 1) openBlockPopup(currentBlockIdx + 1); });
+
+// 색상 정보 맵
+const areaColorMap = {
+  a1: { bg: '#12101c', hbg: '#1a1628', hcol: '#9080bc', tcol: '#a090cc' },
+  a2: { bg: '#001a10', hbg: '#002a18', hcol: '#00c870', tcol: '#6abea0' },
+  a3: { bg: '#1a0e00', hbg: '#281400', hcol: '#e07830', tcol: '#bea878' },
+  a4: { bg: '#001418', hbg: '#001e26', hcol: '#00b4d0', tcol: '#6abe78' },
+  a5: { bg: '#1a0010', hbg: '#280018', hcol: '#e0306a', tcol: '#b080cc' },
+  a6: { bg: '#141200', hbg: '#201e00', hcol: '#c8b800', tcol: '#bcb860' },
+  a7: { bg: '#001418', hbg: '#001a28', hcol: '#3090e0', tcol: '#60a8be' },
+  a8: { bg: '#0e1800', hbg: '#142200', hcol: '#70c020', tcol: '#be7868' },
+};
+
+function openBlockPopup(areaIdx) {
+  currentBlockIdx = areaIdx;
+  const area = areas[areaIdx];
+  const [sr, sc] = blockPositions[areaIdx];
+  const colors = areaColorMap[area.id];
+
+  blockPopupTitle.textContent = area.title.replace(/\n/g, ' / ');
+  blockPopupTitle.style.color = colors.hcol;
+  blockNavIndex.textContent = `${areaIdx + 1} / ${areas.length}`;
+  blockPrevBtn.disabled = areaIdx === 0;
+  blockNextBtn.disabled = areaIdx === areas.length - 1;
+
+  blockGridEl.innerHTML = '';
+
+  const layout = [0, 1, 2, 3, null, 4, 5, 6, 7];
+
+  layout.forEach((itemIdx, pos) => {
+    const cell = document.createElement('div');
+    cell.className = 'block-cell';
+
+    if (itemIdx === null) {
+      cell.classList.add('center-cell');
+      cell.textContent = area.title.replace(/\n/g, ' / ');
+      cell.style.background = colors.hbg;
+      cell.style.color = colors.hcol;
+    } else {
+      const itemText = area.items[itemIdx];
+      cell.style.background = colors.bg;
+      cell.style.color = colors.tcol;
+
+      // 기록 가능한 셀에 dot 표시
+      const loggable = isLoggable(itemText);
+      if (loggable) {
+        const dot = document.createElement('div');
+        dot.className = 'log-dot';
+        dot.title = '기록 가능';
+        cell.appendChild(dot);
+      }
+
+      const textNode = document.createElement('span');
+      textNode.textContent = itemText.replace(/\n/g, ' ');
+      cell.appendChild(textNode);
+
+      const r = sr + Math.floor(pos / 3);
+      const c = sc + (pos % 3);
+      const key = getCellKey(r, c);
+      const cycleDays = getCycleDays(itemText);
+
+      const applyState = () => {
+        const count = clickData[key]?.count || 0;
+        cell.style.filter = count > 0 ? `brightness(${1 + Math.min(count/365,1)*2.2})` : '';
+        cell.classList.toggle('checked', isClickedToday(key, cycleDays));
+        cell.classList.toggle('locked', !isClickable(key, cycleDays));
+      };
+      applyState();
+
+      let lastTapBlock = 0;
+      cell.addEventListener('click', () => {
+        const now = Date.now();
+        if (now - lastTapBlock < 300) {
+          const d = clickData[key];
+          if (d && d.count > 0) {
+            clickData[key].count--;
+            if (!clickData[key].count) delete clickData[key];
+            else clickData[key].lastDate = null;
+            saveClicks(); applyState();
+            applyBrightness(cellEls[r][c], key);
+            applyBorder(cellEls[r][c], key, cycleDays);
+          }
+          lastTapBlock = 0; return;
+        }
+        lastTapBlock = now;
+        if (!isClickable(key, cycleDays)) return;
+        clickData[key] = { count: (clickData[key]?.count||0)+1, lastDate: TODAY };
+        saveClicks(); applyState();
+        applyBrightness(cellEls[r][c], key);
+        applyBorder(cellEls[r][c], key, cycleDays);
+        cell.style.transform = 'scale(0.93)';
+        setTimeout(() => { cell.style.transform = ''; }, 150);
+      });
+
+      let bPressTimer;
+      cell.addEventListener('touchstart', () => {
+        bPressTimer = setTimeout(() => {
+          if (loggable) openModal(itemText, area.id, (date, comment) => {
+            logData.push({ key, cellText: itemText, areaId: area.id, date, comment });
+            saveLogs(); renderLogs();
+          });
+        }, 600);
+      }, { passive: true });
+      cell.addEventListener('touchend', () => clearTimeout(bPressTimer));
+      cell.addEventListener('touchmove', () => clearTimeout(bPressTimer));
+      cell.addEventListener('contextmenu', (e) => {
+        e.preventDefault();
+        if (loggable) openModal(itemText, area.id, (date, comment) => {
+          logData.push({ key, cellText: itemText, areaId: area.id, date, comment });
+          saveLogs(); renderLogs();
+        });
+      });
+    }
+    blockGridEl.appendChild(cell);
+  });
+
+  blockOverlay.classList.add('open');
+}
 
 // ── 모바일 그리드 ──
 function fixMobileGrid() {
