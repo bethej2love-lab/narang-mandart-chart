@@ -601,19 +601,22 @@ const areas = [
 ];
 
 const grid = Array.from({length: 9}, () => Array(9).fill(null));
-function fillBlock(sr, sc, area) {
+function fillBlock(sr, sc, area, areaIdx) {
   const pos = [[0,0],[0,1],[0,2],[1,0],[1,1],[1,2],[2,0],[2,1],[2,2]];
   const sur = [0,1,2,3,5,6,7,8];
   pos.forEach(([dr,dc], idx) => {
     const r = sr+dr, c = sc+dc;
-    grid[r][c] = idx===4
-      ? { text: area.title, cls: area.id+' area-header' }
-      : { text: area.items[sur.indexOf(idx)], cls: area.id };
+    if (idx===4) {
+      grid[r][c] = { text: area.title, cls: area.id+' area-header' };
+    } else {
+      const itemIdx = sur.indexOf(idx);
+      grid[r][c] = { text: area.items[itemIdx], cls: area.id, areaIdx, itemIdx };
+    }
   });
 }
-fillBlock(0,0,areas[0]); fillBlock(0,3,areas[1]); fillBlock(0,6,areas[2]);
-fillBlock(3,0,areas[3]); fillBlock(3,6,areas[4]);
-fillBlock(6,0,areas[5]); fillBlock(6,3,areas[6]); fillBlock(6,6,areas[7]);
+fillBlock(0,0,areas[0],0); fillBlock(0,3,areas[1],1); fillBlock(0,6,areas[2],2);
+fillBlock(3,0,areas[3],3); fillBlock(3,6,areas[4],4);
+fillBlock(6,0,areas[5],5); fillBlock(6,3,areas[6],6); fillBlock(6,6,areas[7],7);
 
 const ct = areas.map(a=>a.title);
 [[3,3,ct[0]],[3,4,ct[1]],[3,5,ct[2]],[4,3,ct[3]],[4,5,ct[4]],[5,3,ct[5]],[5,4,ct[6]],[5,5,ct[7]]].forEach(([r,c,t])=>{
@@ -652,10 +655,10 @@ function getCycleDays(text) {
   return 1;
 }
 
-function isLoggable(text) {
+function isLoggable(text, areaIdx, itemIdx) {
   if (!text) return false;
   if (text.includes('음주') || text.includes('5회')) return false;
-  return getCycleDays(text) > 1;
+  return getEffectiveCycleDays(text, areaIdx, itemIdx) > 1;
 }
 
 function isClickable(key, cycleDays) {
@@ -794,8 +797,8 @@ for (let r = 0; r < 9; r++) {
 
     if (interactive) {
       const key = getCellKey(r,c);
-      const cycleDays = getCycleDays(cell.text);
-      const loggable = isLoggable(cell.text);
+      const cycleDays = getEffectiveCycleDays(cell.text, cell.areaIdx, cell.itemIdx);
+      const loggable = isLoggable(cell.text, cell.areaIdx, cell.itemIdx);
       const areaId = cell.cls.split(' ')[0];
       div.style.cursor = 'pointer';
       applyBrightness(div, key);
@@ -1084,14 +1087,13 @@ try {
   if (saved) saved.forEach((items, i) => { if (areas[i]) areas[i].items = items; });
 } catch(e) {}
 
-// getCycleDays를 커스텀 주기 우선으로 오버라이드
-const _origGetCycleDays = getCycleDays;
-function getCycleDaysWithCustom(text, areaIdx, itemIdx) {
+// getCycleDays: customCycles 우선, 없으면 텍스트 기반
+function getEffectiveCycleDays(text, areaIdx, itemIdx) {
   if (areaIdx !== undefined && itemIdx !== undefined) {
-    const custom = customCycles[areaIdx]?.[itemIdx];
-    if (custom !== undefined) return custom;
+    const custom = customCycles[String(areaIdx)]?.[String(itemIdx)];
+    if (custom !== undefined) return Number(custom);
   }
-  return _origGetCycleDays(text);
+  return getCycleDays(text);
 }
 
 // ── 그리드 리빌드 (설정 저장 후 반영) ──
@@ -1165,7 +1167,7 @@ function getDailyItems() {
       const cell = grid[r][c];
       if (!cell) continue;
       if (cell.cls.includes('area-header') || cell.cls.includes('center-goal') || cell.cls.includes('center-block')) continue;
-      if (getCycleDays(cell.text) === 1) items.push({ r, c, cell });
+      if (getEffectiveCycleDays(cell.text, cell.areaIdx, cell.itemIdx) === 1) items.push({ r, c, cell });
     }
   }
   return items;
@@ -1248,13 +1250,12 @@ function getItemsForPeriod(period) {
   const { start, end } = period === 'week' ? getWeekRange() : getMonthRange();
   const targetCycles = period === 'week' ? [7] : [30, 60, 90, 365];
   const checked = [], unchecked = [];
-
   for (let r = 0; r < 9; r++) {
     for (let c = 0; c < 9; c++) {
       const cell = grid[r][c];
       if (!cell) continue;
       if (cell.cls.includes('area-header') || cell.cls.includes('center-goal') || cell.cls.includes('center-block')) continue;
-      const cd = getCycleDays(cell.text);
+      const cd = getEffectiveCycleDays(cell.text, cell.areaIdx, cell.itemIdx);
       if (!targetCycles.includes(cd)) continue;
       const key = getCellKey(r, c);
       const label = cell.text.replace(/\n/g, ' ');
@@ -1270,20 +1271,17 @@ function getItemsForPeriod(period) {
 function getAreaRatesForPeriod(period) {
   const { start, end } = period === 'week' ? getWeekRange() : period === 'month' ? getMonthRange() : { start: TODAY, end: TODAY };
   const targetCycles = period === 'day' ? [1] : period === 'week' ? [7] : [30, 60, 90, 365];
-
   return areas.map((area, i) => {
     const [sr, sc] = blockPositions[i];
     let total = 0, checked = 0;
     for (let dr = 0; dr < 3; dr++) for (let dc = 0; dc < 3; dc++) {
       const cell = grid[sr+dr][sc+dc];
       if (!cell || cell.cls.includes('area-header')) continue;
-      const cd = getCycleDays(cell.text);
+      const cd = getEffectiveCycleDays(cell.text, cell.areaIdx, cell.itemIdx);
       if (!targetCycles.includes(cd)) continue;
       total++;
       const key = getCellKey(sr+dr, sc+dc);
-      const done = period === 'day'
-        ? isClickedToday(key, 1)
-        : isCheckedInRange(key, start, end);
+      const done = period === 'day' ? isClickedToday(key, 1) : isCheckedInRange(key, start, end);
       if (done) checked++;
     }
     return { name: areaNames[i], color: areaColorMap[area.id].hcol, pct: total ? Math.round(checked/total*100) : 0, total };
@@ -1308,13 +1306,12 @@ function renderAreaStats(elId, period) {
 function renderCheckedList(elId, period) {
   const el = document.getElementById(elId);
   el.innerHTML = '';
-
   if (period === 'day') {
     for (let r = 0; r < 9; r++) {
       for (let c = 0; c < 9; c++) {
         const cell = grid[r][c];
         if (!cell || cell.cls.includes('area-header') || cell.cls.includes('center-goal') || cell.cls.includes('center-block')) continue;
-        if (getCycleDays(cell.text) !== 1) continue;
+        if (getEffectiveCycleDays(cell.text, cell.areaIdx, cell.itemIdx) !== 1) continue;
         const key = getCellKey(r, c);
         if (isClickedToday(key, 1)) {
           const chip = document.createElement('div');
@@ -1333,7 +1330,6 @@ function renderCheckedList(elId, period) {
       el.appendChild(chip);
     });
   }
-
   if (!el.children.length) {
     el.innerHTML = `<div style="font-size:11px;color:var(--text-dim)">아직 체크한 항목이 없어요</div>`;
   }
@@ -1544,7 +1540,7 @@ function openBlockPopup(areaIdx) {
       cell.style.color = colors.tcol;
 
       // 기록 가능한 셀에 dot 표시
-      const loggable = isLoggable(itemText);
+      // loggable은 아래 cycleDays 계산 후 선언
       if (loggable) {
         const dot = document.createElement('div');
         dot.className = 'log-dot';
@@ -1559,7 +1555,8 @@ function openBlockPopup(areaIdx) {
       const r = sr + Math.floor(pos / 3);
       const c = sc + (pos % 3);
       const key = getCellKey(r, c);
-      const cycleDays = getCycleDays(itemText);
+      const cycleDays = getEffectiveCycleDays(itemText, areaIdx, itemIdx);
+      const loggable = isLoggable(itemText, areaIdx, itemIdx);
 
       const applyState = () => {
         const count = clickData[key]?.count || 0;
