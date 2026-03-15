@@ -135,7 +135,7 @@ transition: color 0.15s; -webkit-tap-highlight-color: transparent;
 /* ── 기록 패널 ── */
 .log-panel {
 display: none;
-position: fixed; top: 0; left: 0; right: 0; bottom: 60px;
+position: fixed; top: 0; left: 0; right: 0; bottom: 110px;
 background: var(–bg);
 z-index: 90; overflow-y: auto;
 padding: 20px 16px 20px;
@@ -252,11 +252,10 @@ background: rgba(255,255,255,0.3);
 .comment-panel {
 display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 110px;
 background: var(–bg); z-index: 90; overflow-y: auto;
-padding: 28px 20px 20px;
-flex-direction: column; align-items: center; justify-content: center;
+padding: 24px 16px 20px;
 }
-.comment-panel.open { display: flex; }
-.comment-inner { width: 100%; max-width: 480px; display: flex; flex-direction: column; gap: 20px; }
+.comment-panel.open { display: block; }
+.comment-inner { width: 100%; max-width: 480px; margin: 0 auto; display: flex; flex-direction: column; gap: 20px; }
 .comment-date-label {
 font-family: ‘IBM Plex Mono’, monospace; font-size: 9px;
 color: var(–text-dim); letter-spacing: 2px; text-align: center;
@@ -639,7 +638,16 @@ const ct = areas.map(a=>a.title);
 grid[4][4] = { text:'이상향', cls:'center-goal' };
 
 // ── Storage ──
-const TODAY = new Date().toISOString().slice(0,10);
+// TODAY를 함수로 — 자정 지나면 자동으로 새 날짜 반환
+function getToday() { return new Date().toISOString().slice(0,10); }
+let TODAY = getToday();
+
+// 자정 감지: 날짜 바뀌면 페이지 새로고침
+function checkDateChange() {
+  const newDay = getToday();
+  if (newDay !== TODAY) { TODAY = newDay; location.reload(); }
+}
+setInterval(checkDateChange, 60000); // 1분마다 체크
 
 // 날짜 표기
 const dateEl = document.getElementById('todayDate');
@@ -695,10 +703,11 @@ function isClickable(key, cycleDays) {
   return diff >= cycleDays;
 }
 function isClickedToday(key, cycleDays) {
+  const currentToday = getToday();
   const last = clickData[key]?.lastDate;
   if (!last) return false;
-  const diff = (new Date(TODAY) - new Date(last)) / 86400000;
-  return cycleDays === 1 ? last === TODAY : diff < cycleDays;
+  const diff = (new Date(currentToday) - new Date(last)) / 86400000;
+  return cycleDays === 1 ? last === currentToday : diff < cycleDays;
 }
 function applyBrightness(div, key) {
   const count = clickData[key]?.count || 0;
@@ -707,7 +716,12 @@ function applyBrightness(div, key) {
   div.style.transition = 'filter 0.3s ease';
 }
 function applyBorder(div, key, cycleDays) {
-  if (isClickedToday(key, cycleDays)) {
+  const currentToday = getToday(); // 항상 실시간 날짜 참조
+  const last = clickData[key]?.lastDate;
+  if (!last) { div.style.outline = ''; div.style.outlineOffset = ''; return; }
+  const diff = (new Date(currentToday) - new Date(last)) / 86400000;
+  const active = cycleDays === 1 ? last === currentToday : diff < cycleDays;
+  if (active) {
     div.style.outline = '1.5px solid rgba(255,255,255,0.85)';
     div.style.outlineOffset = '-1.5px';
     div.style.position = 'relative'; div.style.zIndex = '2';
@@ -1006,9 +1020,17 @@ tabRow2.appendChild(settingsBtn);
 tabNav.appendChild(tabRow1);
 tabNav.appendChild(tabRow2);
 
-// 탭 두 줄이니 패딩 조정
-document.body.style.paddingBottom = '110px';
-logPanel.style.bottom = '110px';
+// 탭 실제 높이 계산 후 패딩/패널 bottom 설정
+function adjustPanelOffsets() {
+  const tabH = tabNav.offsetHeight || 110;
+  document.body.style.paddingBottom = tabH + 'px';
+  [logPanel, commentPanel, settingsPanel].forEach(p => {
+    if (p) p.style.bottom = tabH + 'px';
+  });
+}
+// DOM 렌더 후 계산
+setTimeout(adjustPanelOffsets, 100);
+window.addEventListener('resize', adjustPanelOffsets);
 
 // ── 설정 패널 ──
 const CYCLE_OPTIONS = [
