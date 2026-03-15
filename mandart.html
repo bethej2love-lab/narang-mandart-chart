@@ -1378,14 +1378,23 @@ function renderCommentPanel() {
   // 현재 활성 기간 렌더
   renderPeriodContent(activePeriod);
 
-  // 박스 초기화
+  // 박스 초기화 - 오늘 캐시 있으면 바로 표시
   const box = document.getElementById('commentBox');
-  box.textContent = '버튼을 눌러 오늘 하루를 돌아봐요';
-  box.className = 'comment-box loading';
-
   const btn = document.getElementById('commentGenerateBtn');
+  const cachedComment = localStorage.getItem('mandart_comment_cache');
+  let cached = null;
+  try { cached = JSON.parse(cachedComment); } catch(e) {}
+
+  if (cached && cached.date === TODAY && cached.text) {
+    box.className = 'comment-box';
+    box.textContent = cached.text;
+    btn.textContent = '✦ 다시 받기';
+  } else {
+    box.textContent = '버튼을 눌러 오늘 하루를 돌아봐요';
+    box.className = 'comment-box loading';
+    btn.textContent = '✦ 오늘 코멘트 받기';
+  }
   btn.disabled = false;
-  btn.textContent = '✦ 오늘 코멘트 받기';
   btn.onclick = () => requireApiKey(generateComment);
 
   // 키 재설정 버튼
@@ -1468,6 +1477,8 @@ async function generateComment() {
     const text = data.content?.[0]?.text || '응답을 받지 못했어요.';
     box.className = 'comment-box';
     box.textContent = text;
+    // 오늘 날짜로 캐시 저장
+    localStorage.setItem('mandart_comment_cache', JSON.stringify({ date: TODAY, text }));
   } catch(e) {
     box.className = 'comment-box loading';
     box.textContent = '오류가 발생했어요. 다시 시도해봐요.';
