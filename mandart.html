@@ -1118,6 +1118,17 @@ document.getElementById('settingsSaveBtn').addEventListener('click', () => {
 });
 
 // ── 커스텀 주기 저장소 ──
+const areaColorMap = {
+  a1: { bg: '#12101c', hbg: '#1a1628', hcol: '#9080bc', tcol: '#a090cc' },
+  a2: { bg: '#001a10', hbg: '#002a18', hcol: '#00c870', tcol: '#6abea0' },
+  a3: { bg: '#1a0e00', hbg: '#281400', hcol: '#e07830', tcol: '#bea878' },
+  a4: { bg: '#001418', hbg: '#001e26', hcol: '#00b4d0', tcol: '#6abe78' },
+  a5: { bg: '#1a0010', hbg: '#280018', hcol: '#e0306a', tcol: '#b080cc' },
+  a6: { bg: '#141200', hbg: '#201e00', hcol: '#c8b800', tcol: '#bcb860' },
+  a7: { bg: '#001418', hbg: '#001a28', hcol: '#3090e0', tcol: '#60a8be' },
+  a8: { bg: '#0e1800', hbg: '#142200', hcol: '#70c020', tcol: '#be7868' },
+};
+
 // ── 커스텀 아이템 불러오기 ──
 try {
   const saved = JSON.parse(localStorage.getItem('mandart_custom_items'));
@@ -1526,17 +1537,6 @@ blockPrevBtn.addEventListener('click', () => { if (currentBlockIdx > 0) openBloc
 blockNextBtn.addEventListener('click', () => { if (currentBlockIdx < areas.length - 1) openBlockPopup(currentBlockIdx + 1); });
 
 // 색상 정보 맵
-const areaColorMap = {
-  a1: { bg: '#12101c', hbg: '#1a1628', hcol: '#9080bc', tcol: '#a090cc' },
-  a2: { bg: '#001a10', hbg: '#002a18', hcol: '#00c870', tcol: '#6abea0' },
-  a3: { bg: '#1a0e00', hbg: '#281400', hcol: '#e07830', tcol: '#bea878' },
-  a4: { bg: '#001418', hbg: '#001e26', hcol: '#00b4d0', tcol: '#6abe78' },
-  a5: { bg: '#1a0010', hbg: '#280018', hcol: '#e0306a', tcol: '#b080cc' },
-  a6: { bg: '#141200', hbg: '#201e00', hcol: '#c8b800', tcol: '#bcb860' },
-  a7: { bg: '#001418', hbg: '#001a28', hcol: '#3090e0', tcol: '#60a8be' },
-  a8: { bg: '#0e1800', hbg: '#142200', hcol: '#70c020', tcol: '#be7868' },
-};
-
 function openBlockPopup(areaIdx) {
   currentBlockIdx = areaIdx;
   const area = areas[areaIdx];
@@ -1567,8 +1567,13 @@ function openBlockPopup(areaIdx) {
       cell.style.background = colors.bg;
       cell.style.color = colors.tcol;
 
+      const r = sr + Math.floor(pos / 3);
+      const c = sc + (pos % 3);
+      const key = getCellKey(r, c);
+      const cycleDays = getEffectiveCycleDays(itemText, areaIdx, itemIdx);
+      const loggable = isLoggable(itemText, areaIdx, itemIdx);
+
       // 기록 가능한 셀에 dot 표시
-      // loggable은 아래 cycleDays 계산 후 선언
       if (loggable) {
         const dot = document.createElement('div');
         dot.className = 'log-dot';
@@ -1579,12 +1584,6 @@ function openBlockPopup(areaIdx) {
       const textNode = document.createElement('span');
       textNode.textContent = itemText.replace(/\n/g, ' ');
       cell.appendChild(textNode);
-
-      const r = sr + Math.floor(pos / 3);
-      const c = sc + (pos % 3);
-      const key = getCellKey(r, c);
-      const cycleDays = getEffectiveCycleDays(itemText, areaIdx, itemIdx);
-      const loggable = isLoggable(itemText, areaIdx, itemIdx);
 
       const applyState = () => {
         const count = clickData[key]?.count || 0;
