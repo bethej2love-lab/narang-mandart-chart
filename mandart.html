@@ -2,7 +2,8 @@
 <html lang="ko">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes">
+<!-- 1. 키보드 올라와도 확대 안 되도록 수정 -->
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>이상향 — Mandal-Art</title>
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@300;400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
@@ -36,6 +37,9 @@
     flex-direction: column;
     align-items: center;
     padding: 52px 0 88px;
+    /* 2. 전체 텍스트 선택 방지 */
+    -webkit-user-select: none;
+    user-select: none;
   }
 
   .header { text-align: center; margin-bottom: 36px; padding: 0 24px; }
@@ -64,6 +68,7 @@
     color: var(--text-dim); background: var(--surface);
     transition: filter 0.1s; cursor: default;
     word-break: keep-all; overflow: hidden;
+    -webkit-touch-callout: none;
   }
   .cell:hover { filter: brightness(1.6); z-index: 2; position: relative; }
   .cell.area-header { font-weight: 600; font-size: clamp(8px, 0.95vw, 11px); color: #e0e0e0; letter-spacing: -0.3px; }
@@ -93,12 +98,10 @@
   .cell.highlighted { animation: pulse 0.65s ease; }
 
   .footer {
-    margin-top: 24px;
-    margin-bottom: 20px;
+    margin-top: 24px; margin-bottom: 20px;
     font-family: 'IBM Plex Mono', monospace;
     font-size: 9px; color: var(--text-dim); opacity: 0.35;
-    letter-spacing: 0.5px;
-    width: 100%; text-align: center;
+    letter-spacing: 0.5px; width: 100%; text-align: center;
   }
   .today-date {
     font-family: 'IBM Plex Mono', monospace;
@@ -132,13 +135,11 @@
   .log-panel {
     display: none;
     position: fixed; top: 0; left: 0; right: 0; bottom: 110px;
-    background: var(--bg);
-    z-index: 90; overflow-y: auto;
+    background: var(--bg); z-index: 90; overflow-y: auto;
     padding: 20px 16px 20px;
   }
   .log-panel.open { display: block; }
   .log-panel-title { font-size: 13px; font-weight: 600; color: var(--text); margin-bottom: 16px; letter-spacing: -0.3px; }
-
   .log-filter { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 16px; }
   .log-filter-btn {
     padding: 4px 10px; border-radius: 20px; border: 1px solid var(--border);
@@ -147,7 +148,6 @@
     -webkit-tap-highlight-color: transparent;
   }
   .log-filter-btn.active { background: var(--surface); color: var(--text); border-color: #444; }
-
   .log-list { display: flex; flex-direction: column; gap: 8px; }
   .log-item {
     background: var(--surface); border: 1px solid var(--border);
@@ -158,11 +158,17 @@
   .log-item-title { font-size: 11px; font-weight: 500; color: var(--text); }
   .log-item-date { font-family: 'IBM Plex Mono', monospace; font-size: 10px; color: var(--text-dim); }
   .log-item-comment { font-size: 11px; color: #888; margin-top: 2px; }
-  .log-item-delete { font-size: 10px; color: #444; cursor: pointer; padding: 2px 6px; border: none; background: transparent; }
-  .log-item-delete:hover { color: #888; }
+  /* 4. 메모 수정/삭제 버튼 */
+  .log-item-actions { display: flex; gap: 4px; }
+  .log-item-edit, .log-item-delete {
+    font-size: 10px; color: #444; cursor: pointer;
+    padding: 2px 6px; border: none; background: transparent;
+  }
+  .log-item-edit:hover { color: #6090d0; }
+  .log-item-delete:hover { color: #c04040; }
   .log-empty { font-size: 11px; color: var(--text-dim); text-align: center; padding: 40px 0; }
 
-  /* ── 기록 입력 모달 ── */
+  /* ── 기록 입력/수정 모달 ── */
   .modal-overlay {
     display: none; position: fixed; inset: 0;
     background: rgba(0,0,0,0.7); z-index: 200;
@@ -177,10 +183,12 @@
   .modal-title { font-size: 13px; font-weight: 600; color: var(--text); margin-bottom: 4px; }
   .modal-cell-name { font-size: 11px; color: var(--text-dim); margin-bottom: 16px; }
   .modal label { font-size: 10px; color: var(--text-dim); display: block; margin-bottom: 6px; margin-top: 12px; }
+  /* 입력 필드는 user-select 허용 */
   .modal input[type="date"], .modal textarea {
     width: 100%; background: var(--surface); border: 1px solid var(--border);
     border-radius: 4px; color: var(--text); font-family: 'IBM Plex Sans KR', sans-serif;
     font-size: 12px; padding: 10px 12px; outline: none;
+    -webkit-user-select: text; user-select: text;
   }
   .modal input[type="date"]:focus, .modal textarea:focus { border-color: #444; }
   .modal textarea { resize: none; height: 80px; line-height: 1.5; }
@@ -194,12 +202,35 @@
   .modal-btn.confirm:hover { background: #333; }
   .modal-btn.cancel { background: transparent; color: var(--text-dim); border: 1px solid var(--border); }
 
+  /* ── 확인 팝업 (5. 삭제 확인) ── */
+  .confirm-overlay {
+    display: none; position: fixed; inset: 0;
+    background: rgba(0,0,0,0.75); z-index: 500;
+    align-items: center; justify-content: center; padding: 24px;
+  }
+  .confirm-overlay.open { display: flex; }
+  .confirm-box {
+    background: #141415; border: 1px solid var(--border);
+    border-radius: 10px; padding: 24px 20px 20px;
+    width: 100%; max-width: 320px; text-align: center;
+    display: flex; flex-direction: column; gap: 16px;
+  }
+  .confirm-msg { font-size: 13px; color: var(--text); line-height: 1.6; }
+  .confirm-btns { display: flex; gap: 8px; }
+  .confirm-btn {
+    flex: 1; padding: 11px; border-radius: 4px; border: none;
+    font-family: 'IBM Plex Sans KR', sans-serif; font-size: 12px;
+    font-weight: 500; cursor: pointer;
+  }
+  .confirm-btn.danger { background: #5a1a1a; color: #e08080; }
+  .confirm-btn.danger:hover { background: #6a2020; }
+  .confirm-btn.safe { background: transparent; color: var(--text-dim); border: 1px solid var(--border); }
+
   /* ── 블록 확대 팝업 ── */
   .block-overlay {
     display: none; position: fixed; inset: 0;
     background: rgba(0,0,0,0.82); z-index: 300;
-    align-items: center; justify-content: center;
-    padding: 20px;
+    align-items: center; justify-content: center; padding: 20px;
   }
   .block-overlay.open { display: flex; }
   .block-popup {
@@ -207,9 +238,7 @@
     border-radius: 10px; width: 100%; max-width: 380px;
     padding: 20px; display: flex; flex-direction: column; gap: 14px;
   }
-  .block-popup-header {
-    display: flex; align-items: center; justify-content: space-between;
-  }
+  .block-popup-header { display: flex; align-items: center; justify-content: space-between; }
   .block-popup-title { font-size: 14px; font-weight: 600; color: #e8e8e8; letter-spacing: -0.4px; }
   .block-popup-close { border: none; background: transparent; color: var(--text-dim); font-size: 20px; cursor: pointer; padding: 0 4px; line-height: 1; }
   .block-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
@@ -222,6 +251,7 @@
     transition: filter 0.15s, transform 0.1s;
     word-break: keep-all; position: relative;
     -webkit-tap-highlight-color: transparent;
+    -webkit-touch-callout: none;
     user-select: none;
   }
   .block-cell:active { transform: scale(0.95); }
@@ -237,7 +267,6 @@
   }
   .block-nav-btn:hover { color: var(--text); }
   .block-nav-btn:disabled { opacity: 0.15; cursor: default; }
-  /* 기록 가능 표시 */
   .block-cell .log-dot {
     position: absolute; top: 5px; right: 6px;
     width: 4px; height: 4px; border-radius: 50%;
@@ -252,10 +281,7 @@
   }
   .comment-panel.open { display: block; }
   .comment-inner { width: 100%; max-width: 480px; margin: 0 auto; display: flex; flex-direction: column; gap: 20px; }
-  .comment-date-label {
-    font-family: 'IBM Plex Mono', monospace; font-size: 9px;
-    color: var(--text-dim); letter-spacing: 2px; text-align: center;
-  }
+  .comment-date-label { font-family: 'IBM Plex Mono', monospace; font-size: 9px; color: var(--text-dim); letter-spacing: 2px; text-align: center; }
   .comment-box {
     background: var(--surface); border: 1px solid var(--border);
     border-radius: 8px; padding: 22px 20px;
@@ -264,19 +290,14 @@
     white-space: pre-wrap; letter-spacing: -0.2px;
   }
   .comment-box.loading { color: var(--text-dim); font-size: 12px; font-family: 'IBM Plex Mono', monospace; }
-  .comment-checked-list {
-    display: flex; flex-wrap: wrap; gap: 6px;
-  }
+  .comment-checked-list { display: flex; flex-wrap: wrap; gap: 6px; }
   .comment-chip {
     padding: 4px 10px; border-radius: 20px;
     background: var(--surface); border: 1px solid var(--border);
     font-size: 10px; color: var(--text-dim);
   }
   .comment-chip.done { border-color: #333; color: #888; }
-  .comment-section-label {
-    font-size: 10px; color: var(--text-dim); margin-bottom: 6px;
-    font-family: 'IBM Plex Mono', monospace; letter-spacing: 1px;
-  }
+  .comment-section-label { font-size: 10px; color: var(--text-dim); margin-bottom: 6px; font-family: 'IBM Plex Mono', monospace; letter-spacing: 1px; }
   .comment-generate-btn {
     width: 100%; padding: 14px; border-radius: 6px;
     border: 1px solid #333; background: #181818;
@@ -288,49 +309,29 @@
   .comment-generate-btn:disabled { opacity: 0.4; cursor: not-allowed; }
 
   /* ── 스트릭 + 통계 ── */
-  .stats-row {
-    display: grid; grid-template-columns: 1fr 1fr; gap: 8px;
-  }
+  .stats-row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
   .stat-card {
     background: var(--surface); border: 1px solid var(--border);
     border-radius: 8px; padding: 14px 16px;
     display: flex; flex-direction: column; gap: 4px;
   }
-  .stat-card-label {
-    font-family: 'IBM Plex Mono', monospace; font-size: 9px;
-    color: var(--text-dim); letter-spacing: 1px;
-  }
-  .stat-card-value {
-    font-size: 26px; font-weight: 300; letter-spacing: -1px; color: var(--text);
-    line-height: 1;
-  }
+  .stat-card-label { font-family: 'IBM Plex Mono', monospace; font-size: 9px; color: var(--text-dim); letter-spacing: 1px; }
+  .stat-card-value { font-size: 26px; font-weight: 300; letter-spacing: -1px; color: var(--text); line-height: 1; }
   .stat-card-value span { font-size: 12px; color: var(--text-dim); font-weight: 400; }
   .stat-card.streak .stat-card-value { color: #e07830; }
-  .streak-bar {
-    display: flex; gap: 3px; flex-wrap: wrap; margin-top: 2px;
-  }
-  .streak-day {
-    width: 8px; height: 8px; border-radius: 2px; background: var(--border);
-  }
+  .streak-bar { display: flex; gap: 3px; flex-wrap: wrap; margin-top: 2px; }
+  .streak-day { width: 8px; height: 8px; border-radius: 2px; background: var(--border); }
   .streak-day.on { background: #e07830; }
   .streak-day.today { outline: 1px solid #e07830; outline-offset: 1px; }
   .area-stats { display: flex; flex-direction: column; gap: 6px; }
-  .area-stat-row {
-    display: flex; align-items: center; gap: 8px;
-  }
+  .area-stat-row { display: flex; align-items: center; gap: 8px; }
   .area-stat-name { font-size: 10px; color: var(--text-dim); width: 72px; flex-shrink: 0; }
-  .area-stat-bar-wrap {
-    flex: 1; height: 4px; background: var(--border); border-radius: 2px; overflow: hidden;
-  }
+  .area-stat-bar-wrap { flex: 1; height: 4px; background: var(--border); border-radius: 2px; overflow: hidden; }
   .area-stat-bar { height: 100%; border-radius: 2px; transition: width 0.4s ease; }
   .area-stat-pct { font-family: 'IBM Plex Mono', monospace; font-size: 9px; color: var(--text-dim); width: 28px; text-align: right; }
 
   /* ── 기간 탭 ── */
-  .period-tabs {
-    display: flex; gap: 0;
-    background: var(--surface); border: 1px solid var(--border);
-    border-radius: 6px; padding: 3px; 
-  }
+  .period-tabs { display: flex; gap: 0; background: var(--surface); border: 1px solid var(--border); border-radius: 6px; padding: 3px; }
   .period-tab {
     flex: 1; padding: 7px 0; border: none; background: transparent;
     color: var(--text-dim); font-family: 'IBM Plex Sans KR', sans-serif;
@@ -350,15 +351,8 @@
   .settings-panel.open { display: block; }
   .settings-title { font-size: 13px; font-weight: 600; color: var(--text); margin-bottom: 20px; }
   .settings-area-block { margin-bottom: 24px; }
-  .settings-area-title {
-    font-size: 11px; font-weight: 600; margin-bottom: 10px;
-    padding-bottom: 6px; border-bottom: 1px solid var(--border);
-  }
-  .settings-item {
-    display: flex; align-items: center; gap: 8px;
-    padding: 8px 0; border-bottom: 1px solid #161618;
-  }
-  /* 메모 토글 */
+  .settings-area-title { font-size: 11px; font-weight: 600; margin-bottom: 10px; padding-bottom: 6px; border-bottom: 1px solid var(--border); }
+  .settings-item { display: flex; align-items: center; gap: 8px; padding: 8px 0; border-bottom: 1px solid #161618; }
   .log-toggle {
     flex-shrink: 0; width: 32px; height: 18px;
     background: var(--border); border-radius: 9px;
@@ -377,6 +371,7 @@
     color: var(--text); font-family: 'IBM Plex Sans KR', sans-serif;
     font-size: 12px; padding: 4px 8px; border-radius: 4px;
     transition: background 0.15s;
+    -webkit-user-select: text; user-select: text;
   }
   .settings-item-input:focus { background: var(--surface); }
   .settings-cycle-select {
@@ -421,6 +416,7 @@
     width: 100%; background: var(--surface); border: 1px solid var(--border);
     border-radius: 4px; color: var(--text); font-family: 'IBM Plex Mono', monospace;
     font-size: 11px; padding: 10px 12px; outline: none;
+    -webkit-user-select: text; user-select: text;
   }
   .apikey-input:focus { border-color: #444; }
   .apikey-btns { display: flex; gap: 8px; }
@@ -436,10 +432,6 @@
     border: 1px solid var(--border); background: transparent;
     color: var(--text-dim); font-family: 'IBM Plex Sans KR', sans-serif;
     font-size: 12px; cursor: pointer;
-  }
-  .apikey-saved-row {
-    display: flex; align-items: center; justify-content: space-between;
-    font-size: 10px; color: var(--text-dim);
   }
   .apikey-reset { font-size: 10px; color: #555; cursor: pointer; text-decoration: underline; background: none; border: none; }
   .apikey-reset:hover { color: #888; }
@@ -458,7 +450,18 @@
   <div class="mandart-grid" id="grid"></div>
 </div>
 
-<div class="footer" id="footer">모든 것은 기본에서 시작된다</div>
+<div class="footer">모든 것은 기본에서 시작된다</div>
+
+<!-- 5. 삭제 확인 팝업 -->
+<div class="confirm-overlay" id="confirmOverlay">
+  <div class="confirm-box">
+    <div class="confirm-msg" id="confirmMsg">삭제하시겠습니까?</div>
+    <div class="confirm-btns">
+      <button class="confirm-btn safe" id="confirmCancel">취소</button>
+      <button class="confirm-btn danger" id="confirmOk">삭제</button>
+    </div>
+  </div>
+</div>
 
 <!-- API 키 입력 모달 -->
 <div class="apikey-overlay" id="apikeyOverlay">
@@ -490,8 +493,6 @@
 <div class="comment-panel" id="commentPanel">
   <div class="comment-inner">
     <div class="comment-date-label" id="commentDateLabel"></div>
-
-    <!-- 스트릭 -->
     <div class="stats-row">
       <div class="stat-card streak">
         <div class="stat-card-label">STREAK</div>
@@ -499,55 +500,28 @@
         <div class="streak-bar" id="streakBar"></div>
       </div>
       <div class="stat-card">
-        <div class="stat-card-label">getToday()</div>
+        <div class="stat-card-label">TODAY</div>
         <div class="stat-card-value" id="statToday">0 <span>%</span></div>
         <div style="font-size:10px;color:var(--text-dim);margin-top:4px" id="statTodayDetail"></div>
       </div>
     </div>
-
-    <!-- 기간별 탭 -->
     <div class="period-tabs">
       <button class="period-tab active" data-period="day">오늘</button>
       <button class="period-tab" data-period="week">이번 주</button>
       <button class="period-tab" data-period="month">이번 달</button>
     </div>
-
-    <!-- 오늘 -->
     <div class="period-content active" id="periodDay">
-      <div>
-        <div class="comment-section-label">영역별 달성률</div>
-        <div class="area-stats" id="areaStatsDay"></div>
-      </div>
-      <div>
-        <div class="comment-section-label">오늘 한 것</div>
-        <div class="comment-checked-list" id="checkedListDay"></div>
-      </div>
+      <div><div class="comment-section-label">영역별 달성률</div><div class="area-stats" id="areaStatsDay"></div></div>
+      <div><div class="comment-section-label">오늘 한 것</div><div class="comment-checked-list" id="checkedListDay"></div></div>
     </div>
-
-    <!-- 이번 주 -->
     <div class="period-content" id="periodWeek">
-      <div>
-        <div class="comment-section-label">영역별 달성률</div>
-        <div class="area-stats" id="areaStatsWeek"></div>
-      </div>
-      <div>
-        <div class="comment-section-label">이번 주 한 것</div>
-        <div class="comment-checked-list" id="checkedListWeek"></div>
-      </div>
+      <div><div class="comment-section-label">영역별 달성률</div><div class="area-stats" id="areaStatsWeek"></div></div>
+      <div><div class="comment-section-label">이번 주 한 것</div><div class="comment-checked-list" id="checkedListWeek"></div></div>
     </div>
-
-    <!-- 이번 달 -->
     <div class="period-content" id="periodMonth">
-      <div>
-        <div class="comment-section-label">영역별 달성률</div>
-        <div class="area-stats" id="areaStatsMonth"></div>
-      </div>
-      <div>
-        <div class="comment-section-label">이번 달 한 것</div>
-        <div class="comment-checked-list" id="checkedListMonth"></div>
-      </div>
+      <div><div class="comment-section-label">영역별 달성률</div><div class="area-stats" id="areaStatsMonth"></div></div>
+      <div><div class="comment-section-label">이번 달 한 것</div><div class="comment-checked-list" id="checkedListMonth"></div></div>
     </div>
-
     <div class="comment-box loading" id="commentBox">버튼을 눌러 오늘 하루를 돌아봐요</div>
     <button class="comment-generate-btn" id="commentGenerateBtn">✦ 오늘 코멘트 받기</button>
   </div>
@@ -580,7 +554,7 @@
 <!-- 기록 입력 모달 -->
 <div class="modal-overlay" id="modalOverlay">
   <div class="modal">
-    <div class="modal-title">기록 남기기</div>
+    <div class="modal-title" id="modalTitle">기록 남기기</div>
     <div class="modal-cell-name" id="modalCellName"></div>
     <label>날짜</label>
     <input type="date" id="modalDate">
@@ -596,9 +570,8 @@
 <nav class="tab-nav" id="tabNav"></nav>
 
 <script>
-// ── API 키 관리 (localStorage) ──
+// ── API 키 관리 ──
 let ANTHROPIC_API_KEY = localStorage.getItem('mandart_api_key') || '';
-
 function getApiKey() { return localStorage.getItem('mandart_api_key') || ''; }
 function saveApiKey(key) { localStorage.setItem('mandart_api_key', key.trim()); ANTHROPIC_API_KEY = key.trim(); }
 
@@ -613,69 +586,68 @@ const areas = [
   { id: 'a8', title: '창의성\n예술', items: ['음악\n많이 듣기', '월 1회\n전시', '월 영화\n2편', '분기 1번\n극장', '연 3회\n공연', '한 줄\n코멘트', '악기\n연습', '사진·영상\n기록'] },
 ];
 
+const areaColorMap = {
+  a1: { bg: '#12101c', hbg: '#1a1628', hcol: '#9080bc', tcol: '#a090cc' },
+  a2: { bg: '#001a10', hbg: '#002a18', hcol: '#00c870', tcol: '#6abea0' },
+  a3: { bg: '#1a0e00', hbg: '#281400', hcol: '#e07830', tcol: '#bea878' },
+  a4: { bg: '#001418', hbg: '#001e26', hcol: '#00b4d0', tcol: '#6abe78' },
+  a5: { bg: '#1a0010', hbg: '#280018', hcol: '#e0306a', tcol: '#b080cc' },
+  a6: { bg: '#141200', hbg: '#201e00', hcol: '#c8b800', tcol: '#bcb860' },
+  a7: { bg: '#001418', hbg: '#001a28', hcol: '#3090e0', tcol: '#60a8be' },
+  a8: { bg: '#0e1800', hbg: '#142200', hcol: '#70c020', tcol: '#be7868' },
+};
+
 const grid = Array.from({length: 9}, () => Array(9).fill(null));
 function fillBlock(sr, sc, area, areaIdx) {
   const pos = [[0,0],[0,1],[0,2],[1,0],[1,1],[1,2],[2,0],[2,1],[2,2]];
   const sur = [0,1,2,3,5,6,7,8];
   pos.forEach(([dr,dc], idx) => {
     const r = sr+dr, c = sc+dc;
-    if (idx===4) {
-      grid[r][c] = { text: area.title, cls: area.id+' area-header' };
-    } else {
-      const itemIdx = sur.indexOf(idx);
-      grid[r][c] = { text: area.items[itemIdx], cls: area.id, areaIdx, itemIdx };
-    }
+    if (idx===4) { grid[r][c] = { text: area.title, cls: area.id+' area-header' }; }
+    else { const itemIdx = sur.indexOf(idx); grid[r][c] = { text: area.items[itemIdx], cls: area.id, areaIdx, itemIdx }; }
   });
 }
 fillBlock(0,0,areas[0],0); fillBlock(0,3,areas[1],1); fillBlock(0,6,areas[2],2);
 fillBlock(3,0,areas[3],3); fillBlock(3,6,areas[4],4);
 fillBlock(6,0,areas[5],5); fillBlock(6,3,areas[6],6); fillBlock(6,6,areas[7],7);
-
 const ct = areas.map(a=>a.title);
-[[3,3,ct[0]],[3,4,ct[1]],[3,5,ct[2]],[4,3,ct[3]],[4,5,ct[4]],[5,3,ct[5]],[5,4,ct[6]],[5,5,ct[7]]].forEach(([r,c,t])=>{
-  grid[r][c] = { text:t, cls:'center-block area-header' };
-});
+[[3,3,ct[0]],[3,4,ct[1]],[3,5,ct[2]],[4,3,ct[3]],[4,5,ct[4]],[5,3,ct[5]],[5,4,ct[6]],[5,5,ct[7]]].forEach(([r,c,t])=>{ grid[r][c] = { text:t, cls:'center-block area-header' }; });
 grid[4][4] = { text:'이상향', cls:'center-goal' };
 
-// ── Storage ──
-// getToday()를 함수로 — 자정 지나면 자동으로 새 날짜 반환
+// ── Storage & 날짜 ──
 function getToday() {
   const d = new Date();
   return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
 }
 let TODAY = getToday();
+function checkDateChange() { const n = getToday(); if (n !== TODAY) { TODAY = n; location.reload(); } }
+setInterval(checkDateChange, 60000);
 
-// 자정 감지: 날짜 바뀌면 페이지 새로고침
-function checkDateChange() {
-  const newDay = getToday();
-  if (newDay !== TODAY) { TODAY = newDay; location.reload(); }
-}
-setInterval(checkDateChange, 60000); // 1분마다 체크
-
-// 날짜 표기
 const dateEl = document.getElementById('todayDate');
 if (dateEl) {
   const d = new Date();
   const days = ['일','월','화','수','목','금','토'];
   dateEl.textContent = `${d.getFullYear()}.${String(d.getMonth()+1).padStart(2,'0')}.${String(d.getDate()).padStart(2,'0')} ${days[d.getDay()]}`;
 }
-let clickData = {};
-let logData = []; // [{ key, cellText, areaId, date, comment }]
 
+let clickData = {};
+let logData = [];
 try { clickData = JSON.parse(localStorage.getItem('mandart_clicks')) || {}; } catch(e) {}
 try { logData = JSON.parse(localStorage.getItem('mandart_logs')) || []; } catch(e) {}
-
 function saveClicks() { localStorage.setItem('mandart_clicks', JSON.stringify(clickData)); }
 function saveLogs() { localStorage.setItem('mandart_logs', JSON.stringify(logData)); }
 function getCellKey(r,c) { return `${r}_${c}`; }
 
-// customCycles는 Storage 로드 전에 미리 선언 (getEffectiveCycleDays가 참조)
 let customCycles = {};
 try { customCycles = JSON.parse(localStorage.getItem('mandart_custom_cycles')) || {}; } catch(e) {}
-
-// 메모 가능 여부 커스텀 설정 { "areaIdx": { "itemIdx": true/false } }
 let customLoggable = {};
 try { customLoggable = JSON.parse(localStorage.getItem('mandart_custom_loggable')) || {}; } catch(e) {}
+
+// 커스텀 아이템 불러오기
+try {
+  const saved = JSON.parse(localStorage.getItem('mandart_custom_items'));
+  if (saved) saved.forEach((items, i) => { if (areas[i]) areas[i].items = items; });
+} catch(e) {}
 
 function getCycleDays(text) {
   if (!text) return 1;
@@ -687,8 +659,6 @@ function getCycleDays(text) {
   if (text.includes('주')) return 7;
   return 1;
 }
-
-// customCycles 우선, 없으면 텍스트 기반 — Storage 로드 후 재정의됨
 function getEffectiveCycleDays(text, areaIdx, itemIdx) {
   if (areaIdx !== undefined && itemIdx !== undefined) {
     const custom = customCycles[String(areaIdx)]?.[String(itemIdx)];
@@ -696,21 +666,16 @@ function getEffectiveCycleDays(text, areaIdx, itemIdx) {
   }
   return getCycleDays(text);
 }
-
 function isLoggable(text, areaIdx, itemIdx) {
   if (!text) return false;
   if (text.includes('음주') || text.includes('5회')) return false;
-  // 커스텀 설정이 있으면 우선 적용
   const key = `${areaIdx}_${itemIdx}`;
   if (customLoggable[key] !== undefined) return customLoggable[key];
-  // 기본: 주기 1일 초과이면 기록 가능
   return getEffectiveCycleDays(text, areaIdx, itemIdx) > 1;
 }
-
 function isClickable(key, cycleDays) {
   const last = clickData[key]?.lastDate;
   if (!last) return true;
-  // 문자열 날짜 기준으로 정확히 며칠 차이인지 계산 (timezone 문제 방지)
   const lastD = new Date(last + 'T00:00:00');
   const todayD = new Date(getToday() + 'T00:00:00');
   const diff = Math.round((todayD - lastD) / 86400000);
@@ -733,8 +698,7 @@ function applyBrightness(div, key) {
   div.style.transition = 'filter 0.3s ease';
 }
 function applyBorder(div, key, cycleDays) {
-  const active = isClickedToday(key, cycleDays);
-  if (active) {
+  if (isClickedToday(key, cycleDays)) {
     div.style.outline = '1.5px solid rgba(255,255,255,0.85)';
     div.style.outlineOffset = '-1.5px';
     div.style.position = 'relative'; div.style.zIndex = '2';
@@ -743,57 +707,64 @@ function applyBorder(div, key, cycleDays) {
   }
 }
 
-// ── 모달 ──
+// ── 5. 삭제 확인 팝업 ──
+let confirmCallback = null;
+const confirmOverlay = document.getElementById('confirmOverlay');
+document.getElementById('confirmCancel').addEventListener('click', () => { confirmOverlay.classList.remove('open'); confirmCallback = null; });
+document.getElementById('confirmOk').addEventListener('click', () => { confirmOverlay.classList.remove('open'); if (confirmCallback) { confirmCallback(); confirmCallback = null; } });
+function showConfirm(msg, onOk) {
+  document.getElementById('confirmMsg').textContent = msg;
+  confirmCallback = onOk;
+  confirmOverlay.classList.add('open');
+}
+
+// ── 기록 입력/수정 모달 ──
 let modalCallback = null;
+let editingLogIdx = null;
 const modalOverlay = document.getElementById('modalOverlay');
 const modalDate = document.getElementById('modalDate');
 const modalComment = document.getElementById('modalComment');
 const modalCellName = document.getElementById('modalCellName');
+const modalTitle = document.getElementById('modalTitle');
 
-document.getElementById('modalCancel').addEventListener('click', () => {
-  modalOverlay.classList.remove('open');
-});
+document.getElementById('modalCancel').addEventListener('click', () => { modalOverlay.classList.remove('open'); editingLogIdx = null; });
 document.getElementById('modalConfirm').addEventListener('click', () => {
   if (modalCallback) modalCallback(modalDate.value, modalComment.value.trim());
-  modalOverlay.classList.remove('open');
+  modalOverlay.classList.remove('open'); editingLogIdx = null;
 });
-modalOverlay.addEventListener('click', (e) => {
-  if (e.target === modalOverlay) modalOverlay.classList.remove('open');
-});
+modalOverlay.addEventListener('click', (e) => { if (e.target === modalOverlay) { modalOverlay.classList.remove('open'); editingLogIdx = null; } });
 
-function openModal(cellText, areaId, onSave) {
+function openModal(cellText, areaId, onSave, prefillDate, prefillComment, isEdit) {
+  modalTitle.textContent = isEdit ? '기록 수정' : '기록 남기기';
   modalCellName.textContent = cellText.replace(/\n/g, ' ');
-  modalDate.value = getToday();
-  modalComment.value = '';
+  modalDate.value = prefillDate || getToday();
+  modalComment.value = prefillComment || '';
   modalCallback = (date, comment) => onSave(date, comment);
   modalOverlay.classList.add('open');
   setTimeout(() => modalComment.focus(), 300);
 }
 
-// ── 기록 패널 렌더 ──
+// ── 기록 패널 ──
 const areaNames = ['인성/품격','자기관리/루틴','독서/지식','체력/건강','커리어/실력','경제력/재정','철학/가치관','창의성/예술'];
 const areaIds = areas.map(a => a.id);
 let activeFilter = 'all';
 
 function renderLogs() {
   const list = document.getElementById('logList');
-  const filtered = activeFilter === 'all'
-    ? [...logData]
-    : logData.filter(l => l.areaId === activeFilter);
+  const filtered = activeFilter === 'all' ? [...logData] : logData.filter(l => l.areaId === activeFilter);
   filtered.sort((a,b) => b.date.localeCompare(a.date));
-
-  if (!filtered.length) {
-    list.innerHTML = '<div class="log-empty">아직 기록이 없어요</div>';
-    return;
-  }
-  list.innerHTML = filtered.map((l, i) => {
+  if (!filtered.length) { list.innerHTML = '<div class="log-empty">아직 기록이 없어요</div>'; return; }
+  list.innerHTML = filtered.map((l) => {
     const realIdx = logData.indexOf(l);
     const areaName = areaNames[areaIds.indexOf(l.areaId)] || '';
     return `
     <div class="log-item">
       <div class="log-item-header">
         <span class="log-item-title">${l.cellText.replace(/\n/g,' ')} <span style="color:var(--text-dim);font-weight:400;font-size:10px">· ${areaName}</span></span>
-        <button class="log-item-delete" onclick="deleteLog(${realIdx})">✕</button>
+        <div class="log-item-actions">
+          <button class="log-item-edit" onclick="editLog(${realIdx})">수정</button>
+          <button class="log-item-delete" onclick="confirmDeleteLog(${realIdx})">✕</button>
+        </div>
       </div>
       <div class="log-item-date">${l.date}</div>
       ${l.comment ? `<div class="log-item-comment">${l.comment}</div>` : ''}
@@ -801,10 +772,25 @@ function renderLogs() {
   }).join('');
 }
 
-function deleteLog(idx) {
-  logData.splice(idx, 1);
-  saveLogs();
-  renderLogs();
+// 4. 메모 수정
+function editLog(idx) {
+  const log = logData[idx];
+  if (!log) return;
+  openModal(log.cellText, log.areaId, (date, comment) => {
+    logData[idx].date = date;
+    logData[idx].comment = comment;
+    saveLogs();
+    renderLogs();
+  }, log.date, log.comment, true);
+}
+
+// 5. 삭제 확인
+function confirmDeleteLog(idx) {
+  showConfirm('이 기록을 삭제할까요?', () => {
+    logData.splice(idx, 1);
+    saveLogs();
+    renderLogs();
+  });
 }
 
 function buildFilter() {
@@ -839,14 +825,11 @@ for (let r = 0; r < 9; r++) {
 
     const interactive = cell && !cell.cls.includes('center-goal') && !cell.cls.includes('area-header') && !cell.cls.includes('center-block');
 
-    // area-header 클릭 → 블록 확대 팝업
     if (cell && cell.cls.includes('area-header') && !cell.cls.includes('center-block')) {
       div.style.cursor = 'pointer';
       const areaId = cell.cls.split(' ')[0];
       const areaIdx = areas.findIndex(a => a.id === areaId);
-      div.addEventListener('click', () => {
-        if (areaIdx >= 0) openBlockPopup(areaIdx);
-      });
+      div.addEventListener('click', () => { if (areaIdx >= 0) openBlockPopup(areaIdx); });
     }
 
     if (interactive) {
@@ -858,7 +841,6 @@ for (let r = 0; r < 9; r++) {
       applyBrightness(div, key);
       applyBorder(div, key, cycleDays);
 
-      // 기록 가능 셀에 dot 표시
       if (loggable) {
         const dot = document.createElement('div');
         dot.style.cssText = 'position:absolute;top:3px;right:3px;width:3px;height:3px;border-radius:50%;background:rgba(255,255,255,0.25);pointer-events:none;';
@@ -866,45 +848,32 @@ for (let r = 0; r < 9; r++) {
         div.appendChild(dot);
       }
 
-      // 더블탭/더블클릭 취소
       const undoClick = () => {
         const d = clickData[key];
         if (!d || d.count === 0) return;
         clickData[key].count--;
         if (!clickData[key].count) delete clickData[key];
         else clickData[key].lastDate = null;
-        saveClicks();
-        applyBrightness(div, key);
-        applyBorder(div, key, cycleDays);
+        saveClicks(); applyBrightness(div, key); applyBorder(div, key, cycleDays);
       };
 
-      // 더블클릭 (데스크탑)
       div.addEventListener('dblclick', (e) => { e.preventDefault(); undoClick(); });
 
-      // 더블탭 (모바일)
       let lastTap = 0;
       div.addEventListener('click', (e) => {
         const now = Date.now();
-        if (now - lastTap < 300) {
-          // 더블탭 → 취소
-          undoClick();
-          lastTap = 0;
-          return;
-        }
+        if (now - lastTap < 300) { undoClick(); lastTap = 0; return; }
         lastTap = now;
-        // 싱글 클릭 → 체크
         if (!isClickable(key, cycleDays)) return;
         clickData[key] = { count: (clickData[key]?.count||0)+1, lastDate: getToday() };
-        saveClicks();
-        applyBrightness(div, key);
-        applyBorder(div, key, cycleDays);
+        saveClicks(); applyBrightness(div, key); applyBorder(div, key, cycleDays);
         div.style.transform = 'scale(0.93)';
         setTimeout(()=>{ div.style.transform=''; }, 150);
       });
 
-      // 길게 누르기 → 기록 가능한 셀만 모달
+      // 2. 텍스트 선택 방지 + 길게 누르기 기록
       let pressTimer;
-      div.addEventListener('touchstart', () => {
+      div.addEventListener('touchstart', (e) => {
         pressTimer = setTimeout(() => {
           if (loggable) {
             openModal(cell.text, areaId, (date, comment) => {
@@ -918,14 +887,13 @@ for (let r = 0; r < 9; r++) {
       }, { passive: true });
       div.addEventListener('touchend', () => clearTimeout(pressTimer));
       div.addEventListener('touchmove', () => clearTimeout(pressTimer));
-      // 우클릭 → 기록 모달 (데스크탑)
+
       div.addEventListener('contextmenu', (e) => {
         e.preventDefault();
         if (loggable) {
           openModal(cell.text, areaId, (date, comment) => {
             logData.push({ key, cellText: cell.text, areaId, date, comment });
-            saveLogs();
-            renderLogs();
+            saveLogs(); renderLogs();
           });
         }
       });
@@ -945,17 +913,10 @@ const tabNav = document.getElementById('tabNav');
 const logPanel = document.getElementById('logPanel');
 let logPanelOpen = false;
 
-// 영역 탭 8개 (4+4 두 줄 느낌이지만 5열로 나눠 2행 스크롤 대신 탭 8개 + 기록 탭 1개)
-// 탭: 4개씩 + 기록 탭 = 총 5개 보이도록 (8개 영역은 탭 누르면 grid로 이동)
-// 단순하게: 4개 영역탭 row1 + 4개 row2 보다 스크롤 가능한 탭바로
-// → 현재 grid-template-columns: repeat(5,1fr) → 4개 + 기록 탭
-
-// 탭을 두 줄 6개씩으로 재구성
 const tabRow1 = document.createElement('div');
 const tabRow2 = document.createElement('div');
 tabRow1.style.cssText = 'display:grid;grid-template-columns:repeat(6,1fr);grid-column:1/-1;';
 tabRow2.style.cssText = 'display:grid;grid-template-columns:repeat(6,1fr);grid-column:1/-1;';
-
 tabNav.style.gridTemplateColumns = '1fr';
 tabNav.style.gridTemplateRows = 'auto auto';
 
@@ -976,15 +937,11 @@ areas.forEach((area, i) => {
       setTimeout(()=>cell.classList.remove('highlighted'), 750);
     }
   });
-  // 앞 6개 → row1, 나머지 2개 → row2 앞쪽
   i < 6 ? tabRow1.appendChild(btn) : tabRow2.appendChild(btn);
 });
 
-// row2: 철학(6), 창의성(7) 이미 추가됨, 빈칸 1개
-const emptyCell = document.createElement('div');
-tabRow2.appendChild(emptyCell);
+tabRow2.appendChild(document.createElement('div')); // 빈칸
 
-// ✦ 코멘트 탭
 const commentPanel = document.getElementById('commentPanel');
 let commentPanelOpen = false;
 const commentBtn = document.createElement('button');
@@ -1000,7 +957,6 @@ commentBtn.addEventListener('click', () => {
 });
 tabRow2.appendChild(commentBtn);
 
-// 기록 탭
 const logBtn = document.createElement('button');
 logBtn.className = 'tab-btn';
 logBtn.innerHTML = `<div style="width:5px;height:5px;border-radius:50%;background:#555"></div><span style="font-size:8px">기록</span>`;
@@ -1014,7 +970,6 @@ logBtn.addEventListener('click', () => {
 });
 tabRow2.appendChild(logBtn);
 
-// ⚙ 설정 탭
 const settingsPanel = document.getElementById('settingsPanel');
 let settingsPanelOpen = false;
 const settingsBtn = document.createElement('button');
@@ -1033,49 +988,33 @@ tabRow2.appendChild(settingsBtn);
 tabNav.appendChild(tabRow1);
 tabNav.appendChild(tabRow2);
 
-// 탭 실제 높이 계산 후 패딩/패널 bottom 설정
 function adjustPanelOffsets() {
   const tabH = tabNav.offsetHeight || 110;
   document.body.style.paddingBottom = tabH + 'px';
-  [logPanel, commentPanel, settingsPanel].forEach(p => {
-    if (p) p.style.bottom = tabH + 'px';
-  });
+  [logPanel, commentPanel, settingsPanel].forEach(p => { if (p) p.style.bottom = tabH + 'px'; });
 }
-// DOM 렌더 후 계산
 setTimeout(adjustPanelOffsets, 100);
 window.addEventListener('resize', adjustPanelOffsets);
 
 // ── 설정 패널 ──
 const CYCLE_OPTIONS = [
-  { label: '매일', days: 1 },
-  { label: '주', days: 7 },
-  { label: '월', days: 30 },
-  { label: '격월', days: 60 },
-  { label: '분기', days: 90 },
-  { label: '연', days: 365 },
+  { label: '매일', days: 1 }, { label: '주', days: 7 }, { label: '월', days: 30 },
+  { label: '격월', days: 60 }, { label: '분기', days: 90 }, { label: '연', days: 365 },
 ];
-
-function guessCycleDaysLabel(days) {
-  const found = CYCLE_OPTIONS.find(o => o.days === days);
-  return found ? found.label : '매일';
-}
 
 function renderSettingsPanel() {
   const content = document.getElementById('settingsContent');
   content.innerHTML = '';
-
   areas.forEach((area, areaIdx) => {
     const block = document.createElement('div');
     block.className = 'settings-area-block';
     const colors = areaColorMap[area.id];
     block.innerHTML = `<div class="settings-area-title" style="color:${colors.hcol}">${area.title.replace(/\n/g,' / ')}</div>`;
-
     area.items.forEach((item, itemIdx) => {
       const cycleDays = getEffectiveCycleDays(item, areaIdx, itemIdx);
       const row = document.createElement('div');
       row.className = 'settings-item';
 
-      // 텍스트 입력
       const input = document.createElement('input');
       input.className = 'settings-item-input';
       input.type = 'text';
@@ -1083,20 +1022,17 @@ function renderSettingsPanel() {
       input.dataset.areaIdx = areaIdx;
       input.dataset.itemIdx = itemIdx;
 
-      // 주기 선택
       const select = document.createElement('select');
       select.className = 'settings-cycle-select';
       select.dataset.areaIdx = areaIdx;
       select.dataset.itemIdx = itemIdx;
       CYCLE_OPTIONS.forEach(opt => {
         const option = document.createElement('option');
-        option.value = opt.days;
-        option.textContent = opt.label;
+        option.value = opt.days; option.textContent = opt.label;
         if (opt.days === cycleDays) option.selected = true;
         select.appendChild(option);
       });
 
-      // 메모 토글
       const loggableNow = isLoggable(item, areaIdx, itemIdx);
       const toggle = document.createElement('button');
       toggle.className = 'log-toggle' + (loggableNow ? ' on' : '');
@@ -1110,79 +1046,39 @@ function renderSettingsPanel() {
         toggle.classList.toggle('on', !cur);
       });
 
-      row.appendChild(input);
-      row.appendChild(select);
-      row.appendChild(toggle);
+      row.appendChild(input); row.appendChild(select); row.appendChild(toggle);
       block.appendChild(row);
     });
-
     content.appendChild(block);
   });
 }
 
 document.getElementById('settingsSaveBtn').addEventListener('click', () => {
-  // 모든 input/select 값 읽어서 areas 업데이트
-  const inputs = document.querySelectorAll('.settings-item-input');
-  const selects = document.querySelectorAll('.settings-cycle-select');
-
-  inputs.forEach(input => {
-    const aIdx = parseInt(input.dataset.areaIdx);
-    const iIdx = parseInt(input.dataset.itemIdx);
+  document.querySelectorAll('.settings-item-input').forEach(input => {
+    const aIdx = parseInt(input.dataset.areaIdx), iIdx = parseInt(input.dataset.itemIdx);
     const newText = input.value.trim();
     if (newText) areas[aIdx].items[iIdx] = newText;
   });
-
-  selects.forEach(select => {
-    const aIdx = parseInt(select.dataset.areaIdx);
-    const iIdx = parseInt(select.dataset.itemIdx);
+  document.querySelectorAll('.settings-cycle-select').forEach(select => {
+    const aIdx = parseInt(select.dataset.areaIdx), iIdx = parseInt(select.dataset.itemIdx);
     const days = parseInt(select.value);
     if (!customCycles[aIdx]) customCycles[aIdx] = {};
     customCycles[aIdx][iIdx] = days;
   });
-
-  // 메모 토글 저장
   document.querySelectorAll('.log-toggle').forEach(toggle => {
-    const aIdx = toggle.dataset.areaIdx;
-    const iIdx = toggle.dataset.itemIdx;
-    const key = `${aIdx}_${iIdx}`;
+    const key = `${toggle.dataset.areaIdx}_${toggle.dataset.itemIdx}`;
     customLoggable[key] = toggle.dataset.loggable === 'true';
   });
-
-  // localStorage 저장
   localStorage.setItem('mandart_custom_items', JSON.stringify(areas.map(a => a.items)));
   localStorage.setItem('mandart_custom_cycles', JSON.stringify(customCycles));
   localStorage.setItem('mandart_custom_loggable', JSON.stringify(customLoggable));
-
-  // 그리드 리렌더
   rebuildGrid();
-
-  // 토스트
   const toast = document.getElementById('settingsToast');
   toast.classList.add('show');
   setTimeout(() => toast.classList.remove('show'), 2000);
 });
 
-// ── 커스텀 주기 저장소 ──
-const areaColorMap = {
-  a1: { bg: '#12101c', hbg: '#1a1628', hcol: '#9080bc', tcol: '#a090cc' },
-  a2: { bg: '#001a10', hbg: '#002a18', hcol: '#00c870', tcol: '#6abea0' },
-  a3: { bg: '#1a0e00', hbg: '#281400', hcol: '#e07830', tcol: '#bea878' },
-  a4: { bg: '#001418', hbg: '#001e26', hcol: '#00b4d0', tcol: '#6abe78' },
-  a5: { bg: '#1a0010', hbg: '#280018', hcol: '#e0306a', tcol: '#b080cc' },
-  a6: { bg: '#141200', hbg: '#201e00', hcol: '#c8b800', tcol: '#bcb860' },
-  a7: { bg: '#001418', hbg: '#001a28', hcol: '#3090e0', tcol: '#60a8be' },
-  a8: { bg: '#0e1800', hbg: '#142200', hcol: '#70c020', tcol: '#be7868' },
-};
-
-// ── 커스텀 아이템 불러오기 ──
-try {
-  const saved = JSON.parse(localStorage.getItem('mandart_custom_items'));
-  if (saved) saved.forEach((items, i) => { if (areas[i]) areas[i].items = items; });
-} catch(e) {}
-
-// ── 그리드 리빌드 (설정 저장 후 반영) ──
 function rebuildGrid() {
-  // grid 데이터 재구성
   areas.forEach((area, i) => {
     const [sr, sc] = blockPositions[i];
     const pos = [[0,0],[0,1],[0,2],[1,0],[1,1],[1,2],[2,0],[2,1],[2,2]];
@@ -1194,18 +1090,12 @@ function rebuildGrid() {
       }
     });
   });
-
-  // 셀 텍스트 + dot 업데이트
-  for (let r = 0; r < 9; r++) {
-    for (let c = 0; c < 9; c++) {
-      const cell = grid[r][c];
-      const div = cellEls[r][c];
-      if (!cell || !div) continue;
-      if (cell.cls.includes('area-header') || cell.cls.includes('center-goal') || cell.cls.includes('center-block')) continue;
-      // 텍스트 노드만 업데이트 (dot 유지)
-      div.childNodes.forEach(n => { if (n.nodeType === 3) n.textContent = cell.text.replace(/\\n/g,'\n'); });
-      if (!div.childNodes.length) div.textContent = cell.text.replace(/\\n/g,'\n');
-    }
+  for (let r = 0; r < 9; r++) for (let c = 0; c < 9; c++) {
+    const cell = grid[r][c]; const div = cellEls[r][c];
+    if (!cell || !div) continue;
+    if (cell.cls.includes('area-header') || cell.cls.includes('center-goal') || cell.cls.includes('center-block')) continue;
+    div.childNodes.forEach(n => { if (n.nodeType === 3) n.textContent = cell.text.replace(/\\n/g,'\n'); });
+    if (!div.childNodes.length) div.textContent = cell.text.replace(/\\n/g,'\n');
   }
   autoFitCells();
 }
@@ -1217,19 +1107,13 @@ let apikeyCallback = null;
 
 document.getElementById('apikeySave').addEventListener('click', () => {
   const key = apikeyInput.value.trim();
-  if (!key.startsWith('sk-')) {
-    apikeyInput.style.borderColor = '#c04040';
-    return;
-  }
+  if (!key.startsWith('sk-')) { apikeyInput.style.borderColor = '#c04040'; return; }
   apikeyInput.style.borderColor = '';
   saveApiKey(key);
   apikeyOverlay.classList.remove('open');
   if (apikeyCallback) { apikeyCallback(); apikeyCallback = null; }
 });
-document.getElementById('apikeyCancel').addEventListener('click', () => {
-  apikeyOverlay.classList.remove('open');
-  apikeyCallback = null;
-});
+document.getElementById('apikeyCancel').addEventListener('click', () => { apikeyOverlay.classList.remove('open'); apikeyCallback = null; });
 
 function requireApiKey(onReady) {
   const key = getApiKey();
@@ -1240,210 +1124,144 @@ function requireApiKey(onReady) {
   setTimeout(() => apikeyInput.focus(), 300);
 }
 
-// ── AI 코멘트 ──
 // ── 스트릭 & 통계 ──
-
-// 일일 항목만 (cycleDays === 1) 추출
 function getDailyItems() {
   const items = [];
-  for (let r = 0; r < 9; r++) {
-    for (let c = 0; c < 9; c++) {
-      const cell = grid[r][c];
-      if (!cell) continue;
-      if (cell.cls.includes('area-header') || cell.cls.includes('center-goal') || cell.cls.includes('center-block')) continue;
-      if (getEffectiveCycleDays(cell.text, cell.areaIdx, cell.itemIdx) === 1) items.push({ r, c, cell });
-    }
+  for (let r = 0; r < 9; r++) for (let c = 0; c < 9; c++) {
+    const cell = grid[r][c];
+    if (!cell || cell.cls.includes('area-header') || cell.cls.includes('center-goal') || cell.cls.includes('center-block')) continue;
+    if (getEffectiveCycleDays(cell.text, cell.areaIdx, cell.itemIdx) === 1) items.push({ r, c, cell });
   }
   return items;
 }
-
-// 특정 날짜에 절반 이상 체크했는지
 function isStreakDay(dateStr) {
   const dailyItems = getDailyItems();
   if (!dailyItems.length) return false;
   let checked = 0;
-  dailyItems.forEach(({ r, c }) => {
-    const key = getCellKey(r, c);
-    const last = clickData[key]?.lastDate;
-    if (last === dateStr) checked++;
-  });
+  dailyItems.forEach(({ r, c }) => { if (clickData[getCellKey(r,c)]?.lastDate === dateStr) checked++; });
   return checked >= Math.ceil(dailyItems.length / 2);
 }
-
-// 연속 스트릭 계산 (오늘 포함 과거로 거슬러 올라가며)
 function calcStreak() {
   let streak = 0;
-  const d = new Date(getToday());
-  // 오늘 먼저 확인, 안 됐으면 어제부터
-  const startFromYesterday = !isStreakDay(getToday());
-  if (startFromYesterday) d.setDate(d.getDate() - 1);
+  const d = new Date(getToday() + 'T00:00:00');
+  if (!isStreakDay(getToday())) d.setDate(d.getDate() - 1);
   while (true) {
-    const dateStr = d.toISOString().slice(0, 10);
-    if (isStreakDay(dateStr)) { streak++; d.setDate(d.getDate() - 1); }
-    else break;
+    const ds = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+    if (isStreakDay(ds)) { streak++; d.setDate(d.getDate() - 1); } else break;
     if (streak > 365) break;
   }
   return streak;
 }
-
-// 최근 N일 스트릭 여부 배열
 function getRecentStreakDays(n = 14) {
-  const result = [];
-  const d = new Date(getToday());
-  for (let i = n - 1; i >= 0; i--) {
+  const result = [], d = new Date(getToday() + 'T00:00:00');
+  for (let i = n-1; i >= 0; i--) {
     const dd = new Date(d); dd.setDate(dd.getDate() - i);
-    const dateStr = dd.toISOString().slice(0, 10);
-    result.push({ dateStr, on: isStreakDay(dateStr), isToday: dateStr === getToday() });
+    const ds = `${dd.getFullYear()}-${String(dd.getMonth()+1).padStart(2,'0')}-${String(dd.getDate()).padStart(2,'0')}`;
+    result.push({ dateStr: ds, on: isStreakDay(ds), isToday: ds === getToday() });
   }
   return result;
 }
-
-// 오늘 달성률 (일일 항목 기준)
 function getTodayRate() {
-  const dailyItems = getDailyItems();
-  if (!dailyItems.length) return { pct: 0, checked: 0, total: 0 };
+  const items = getDailyItems();
+  if (!items.length) return { pct: 0, checked: 0, total: 0 };
   let checked = 0;
-  dailyItems.forEach(({ r, c }) => {
-    if (isClickedToday(getCellKey(r, c), 1)) checked++;
-  });
-  return { pct: Math.round(checked / dailyItems.length * 100), checked, total: dailyItems.length };
+  items.forEach(({ r, c }) => { if (isClickedToday(getCellKey(r,c), 1)) checked++; });
+  return { pct: Math.round(checked/items.length*100), checked, total: items.length };
 }
-
-// 이번 주 월요일 ~ 오늘
 function getWeekRange() {
-  const d = new Date(getToday());
-  const day = d.getDay(); // 0=일
-  const mon = new Date(d); mon.setDate(d.getDate() - (day === 0 ? 6 : day - 1));
-  return { start: mon.toISOString().slice(0,10), end: getToday() };
+  const d = new Date(getToday() + 'T00:00:00'), day = d.getDay();
+  const mon = new Date(d); mon.setDate(d.getDate() - (day===0?6:day-1));
+  return { start: `${mon.getFullYear()}-${String(mon.getMonth()+1).padStart(2,'0')}-${String(mon.getDate()).padStart(2,'0')}`, end: getToday() };
 }
-
-// 이번 달 1일 ~ 오늘
-function getMonthRange() {
-  return { start: getToday().slice(0,8) + '01', end: getToday() };
-}
-
-// 기간 내에 체크된 적 있는지
+function getMonthRange() { return { start: getToday().slice(0,8)+'01', end: getToday() }; }
 function isCheckedInRange(key, startDate, endDate) {
   const last = clickData[key]?.lastDate;
-  if (!last) return false;
-  return last >= startDate && last <= endDate;
+  return last ? last >= startDate && last <= endDate : false;
 }
-
-// 기간별 항목 수집 (cycleDays 필터링)
 function getItemsForPeriod(period) {
   const { start, end } = period === 'week' ? getWeekRange() : getMonthRange();
   const targetCycles = period === 'week' ? [7] : [30, 60, 90, 365];
   const checked = [], unchecked = [];
-  for (let r = 0; r < 9; r++) {
-    for (let c = 0; c < 9; c++) {
-      const cell = grid[r][c];
-      if (!cell) continue;
-      if (cell.cls.includes('area-header') || cell.cls.includes('center-goal') || cell.cls.includes('center-block')) continue;
-      const cd = getEffectiveCycleDays(cell.text, cell.areaIdx, cell.itemIdx);
-      if (!targetCycles.includes(cd)) continue;
-      const key = getCellKey(r, c);
-      const label = cell.text.replace(/\n/g, ' ');
-      const areaId = cell.cls.split(' ')[0];
-      if (isCheckedInRange(key, start, end)) checked.push({ label, areaId });
-      else unchecked.push({ label, areaId });
-    }
+  for (let r = 0; r < 9; r++) for (let c = 0; c < 9; c++) {
+    const cell = grid[r][c];
+    if (!cell || cell.cls.includes('area-header') || cell.cls.includes('center-goal') || cell.cls.includes('center-block')) continue;
+    const cd = getEffectiveCycleDays(cell.text, cell.areaIdx, cell.itemIdx);
+    if (!targetCycles.includes(cd)) continue;
+    const key = getCellKey(r, c);
+    const label = cell.text.replace(/\n/g, ' ');
+    const areaId = cell.cls.split(' ')[0];
+    if (isCheckedInRange(key, start, end)) checked.push({ label, areaId });
+    else unchecked.push({ label, areaId });
   }
   return { checked, unchecked, total: checked.length + unchecked.length };
 }
-
-// 영역별 달성률 (기간 기준)
 function getAreaRatesForPeriod(period) {
-  const { start, end } = period === 'week' ? getWeekRange() : period === 'month' ? getMonthRange() : { start: getToday(), end: getToday() };
-  const targetCycles = period === 'day' ? [1] : period === 'week' ? [7] : [30, 60, 90, 365];
+  const { start, end } = period==='week' ? getWeekRange() : period==='month' ? getMonthRange() : { start: getToday(), end: getToday() };
+  const targetCycles = period==='day' ? [1] : period==='week' ? [7] : [30,60,90,365];
   return areas.map((area, i) => {
     const [sr, sc] = blockPositions[i];
     let total = 0, checked = 0;
-    for (let dr = 0; dr < 3; dr++) for (let dc = 0; dc < 3; dc++) {
+    for (let dr=0;dr<3;dr++) for (let dc=0;dc<3;dc++) {
       const cell = grid[sr+dr][sc+dc];
       if (!cell || cell.cls.includes('area-header')) continue;
       const cd = getEffectiveCycleDays(cell.text, cell.areaIdx, cell.itemIdx);
       if (!targetCycles.includes(cd)) continue;
       total++;
       const key = getCellKey(sr+dr, sc+dc);
-      const done = period === 'day' ? isClickedToday(key, 1) : isCheckedInRange(key, start, end);
-      if (done) checked++;
+      if (period==='day' ? isClickedToday(key,1) : isCheckedInRange(key, start, end)) checked++;
     }
-    return { name: areaNames[i], color: areaColorMap[area.id].hcol, pct: total ? Math.round(checked/total*100) : 0, total };
+    return { name: areaNames[i], color: areaColorMap[area.id].hcol, pct: total?Math.round(checked/total*100):0, total };
   }).filter(a => a.total > 0);
 }
-
 function renderAreaStats(elId, period) {
-  const el = document.getElementById(elId);
-  el.innerHTML = '';
+  const el = document.getElementById(elId); el.innerHTML = '';
   getAreaRatesForPeriod(period).forEach(({ name, color, pct }) => {
-    el.innerHTML += `
-      <div class="area-stat-row">
-        <div class="area-stat-name">${name}</div>
-        <div class="area-stat-bar-wrap">
-          <div class="area-stat-bar" style="width:${pct}%;background:${color}"></div>
-        </div>
-        <div class="area-stat-pct">${pct}%</div>
-      </div>`;
+    el.innerHTML += `<div class="area-stat-row"><div class="area-stat-name">${name}</div><div class="area-stat-bar-wrap"><div class="area-stat-bar" style="width:${pct}%;background:${color}"></div></div><div class="area-stat-pct">${pct}%</div></div>`;
   });
 }
-
 function renderCheckedList(elId, period) {
-  const el = document.getElementById(elId);
-  el.innerHTML = '';
+  const el = document.getElementById(elId); el.innerHTML = '';
   if (period === 'day') {
-    for (let r = 0; r < 9; r++) {
-      for (let c = 0; c < 9; c++) {
-        const cell = grid[r][c];
-        if (!cell || cell.cls.includes('area-header') || cell.cls.includes('center-goal') || cell.cls.includes('center-block')) continue;
-        if (getEffectiveCycleDays(cell.text, cell.areaIdx, cell.itemIdx) !== 1) continue;
-        const key = getCellKey(r, c);
-        if (isClickedToday(key, 1)) {
-          const chip = document.createElement('div');
-          chip.className = 'comment-chip done';
-          chip.textContent = '✓ ' + cell.text.replace(/\n/g, ' ');
-          el.appendChild(chip);
-        }
+    for (let r=0;r<9;r++) for (let c=0;c<9;c++) {
+      const cell = grid[r][c];
+      if (!cell || cell.cls.includes('area-header') || cell.cls.includes('center-goal') || cell.cls.includes('center-block')) continue;
+      if (getEffectiveCycleDays(cell.text, cell.areaIdx, cell.itemIdx) !== 1) continue;
+      if (isClickedToday(getCellKey(r,c), 1)) {
+        const chip = document.createElement('div');
+        chip.className = 'comment-chip done';
+        chip.textContent = '✓ ' + cell.text.replace(/\n/g,' ');
+        el.appendChild(chip);
       }
     }
   } else {
-    const { checked } = getItemsForPeriod(period);
-    checked.forEach(({ label }) => {
+    getItemsForPeriod(period).checked.forEach(({ label }) => {
       const chip = document.createElement('div');
       chip.className = 'comment-chip done';
       chip.textContent = '✓ ' + label;
       el.appendChild(chip);
     });
   }
-  if (!el.children.length) {
-    el.innerHTML = `<div style="font-size:11px;color:var(--text-dim)">아직 체크한 항목이 없어요</div>`;
-  }
+  if (!el.children.length) el.innerHTML = `<div style="font-size:11px;color:var(--text-dim)">아직 체크한 항목이 없어요</div>`;
 }
 
 let activePeriod = 'day';
-
 function renderCommentPanel() {
-  const d = new Date();
-  const days = ['일','월','화','수','목','금','토'];
-  document.getElementById('commentDateLabel').textContent =
-    `${d.getFullYear()}.${String(d.getMonth()+1).padStart(2,'0')}.${String(d.getDate()).padStart(2,'0')} ${days[d.getDay()]}`;
+  const d = new Date(), days = ['일','월','화','수','목','금','토'];
+  document.getElementById('commentDateLabel').textContent = `${d.getFullYear()}.${String(d.getMonth()+1).padStart(2,'0')}.${String(d.getDate()).padStart(2,'0')} ${days[d.getDay()]}`;
 
-  // 스트릭
   const streak = calcStreak();
   document.getElementById('statStreak').innerHTML = `${streak} <span>일 연속</span>`;
-  const streakBar = document.getElementById('streakBar');
-  streakBar.innerHTML = '';
+  const streakBar = document.getElementById('streakBar'); streakBar.innerHTML = '';
   getRecentStreakDays(14).forEach(({ on, isToday }) => {
     const el = document.createElement('div');
-    el.className = 'streak-day' + (on ? ' on' : '') + (isToday ? ' today' : '');
+    el.className = 'streak-day' + (on?' on':'') + (isToday?' today':'');
     streakBar.appendChild(el);
   });
 
-  // getToday() 카드 (일일 기준)
   const { pct, checked, total } = getTodayRate();
   document.getElementById('statToday').innerHTML = `${pct} <span>%</span>`;
   document.getElementById('statTodayDetail').textContent = `${checked} / ${total} 완료`;
 
-  // 기간 탭 이벤트
   document.querySelectorAll('.period-tab').forEach(btn => {
     btn.onclick = () => {
       activePeriod = btn.dataset.period;
@@ -1454,45 +1272,30 @@ function renderCommentPanel() {
       renderPeriodContent(activePeriod);
     };
   });
-
-  // 현재 활성 기간 렌더
   renderPeriodContent(activePeriod);
 
-  // 박스 초기화 - 오늘 캐시 있으면 바로 표시
-  const box = document.getElementById('commentBox');
-  const btn = document.getElementById('commentGenerateBtn');
-  const cachedComment = localStorage.getItem('mandart_comment_cache');
+  const box = document.getElementById('commentBox'), btn = document.getElementById('commentGenerateBtn');
   let cached = null;
-  try { cached = JSON.parse(cachedComment); } catch(e) {}
-
+  try { cached = JSON.parse(localStorage.getItem('mandart_comment_cache')); } catch(e) {}
   if (cached && cached.date === getToday() && cached.text) {
-    box.className = 'comment-box';
-    box.textContent = cached.text;
-    btn.textContent = '✦ 다시 받기';
+    box.className = 'comment-box'; box.textContent = cached.text; btn.textContent = '✦ 다시 받기';
   } else {
-    box.textContent = '버튼을 눌러 오늘 하루를 돌아봐요';
-    box.className = 'comment-box loading';
-    btn.textContent = '✦ 오늘 코멘트 받기';
+    box.textContent = '버튼을 눌러 오늘 하루를 돌아봐요'; box.className = 'comment-box loading'; btn.textContent = '✦ 오늘 코멘트 받기';
   }
   btn.disabled = false;
   btn.onclick = () => requireApiKey(generateComment);
 
-  // 키 재설정 버튼
   const inner = document.querySelector('.comment-inner');
   if (!document.getElementById('apikeyResetRow')) {
     const resetRow = document.createElement('div');
-    resetRow.id = 'apikeyResetRow';
-    resetRow.style.cssText = 'text-align:right;';
+    resetRow.id = 'apikeyResetRow'; resetRow.style.cssText = 'text-align:right;';
     resetRow.innerHTML = `<button class="apikey-reset" id="apikeyResetBtn">API 키 재설정</button>`;
     inner.appendChild(resetRow);
     document.getElementById('apikeyResetBtn').addEventListener('click', () => {
-      localStorage.removeItem('mandart_api_key');
-      ANTHROPIC_API_KEY = '';
-      requireApiKey(generateComment);
+      localStorage.removeItem('mandart_api_key'); ANTHROPIC_API_KEY = ''; requireApiKey(generateComment);
     });
   }
 }
-
 function renderPeriodContent(period) {
   const suffix = period.charAt(0).toUpperCase() + period.slice(1);
   renderAreaStats('areaStats' + suffix, period);
@@ -1500,76 +1303,36 @@ function renderPeriodContent(period) {
 }
 
 async function generateComment() {
-  const box = document.getElementById('commentBox');
-  const btn = document.getElementById('commentGenerateBtn');
-  btn.disabled = true;
-  btn.textContent = '생성 중...';
-  box.className = 'comment-box loading';
-  box.textContent = '잠깐, 오늘 하루 살펴보는 중...';
-
-  const checkedItems = [];
-  const uncheckedItems = [];
-  for (let r = 0; r < 9; r++) {
-    for (let c = 0; c < 9; c++) {
-      const cell = grid[r][c];
-      if (!cell) continue;
-      if (cell.cls.includes('area-header') || cell.cls.includes('center-goal') || cell.cls.includes('center-block')) continue;
-      const key = getCellKey(r, c);
-      const cycleDays = getEffectiveCycleDays(cell.text, cell.areaIdx, cell.itemIdx);
-      const label = cell.text.replace(/\n/g, ' ');
-      if (isClickedToday(key, cycleDays)) checkedItems.push(label);
-      else uncheckedItems.push(label);
-    }
+  const box = document.getElementById('commentBox'), btn = document.getElementById('commentGenerateBtn');
+  btn.disabled = true; btn.textContent = '생성 중...';
+  box.className = 'comment-box loading'; box.textContent = '잠깐, 오늘 하루 살펴보는 중...';
+  const checkedItems = [], uncheckedItems = [];
+  for (let r=0;r<9;r++) for (let c=0;c<9;c++) {
+    const cell = grid[r][c];
+    if (!cell || cell.cls.includes('area-header') || cell.cls.includes('center-goal') || cell.cls.includes('center-block')) continue;
+    const key = getCellKey(r,c), cycleDays = getEffectiveCycleDays(cell.text, cell.areaIdx, cell.itemIdx);
+    const label = cell.text.replace(/\n/g,' ');
+    if (isClickedToday(key, cycleDays)) checkedItems.push(label); else uncheckedItems.push(label);
   }
-
   try {
-    const prompt = `너는 손웅정 감독처럼 직설적이고 따뜻한 멘토야. 아래는 내가 오늘 이상향을 향해 체크한 만다르트 항목이야.
-
-오늘 한 것 (${checkedItems.length}개): ${checkedItems.length ? checkedItems.join(', ') : '없음'}
-오늘 못 한 것 중 일부: ${uncheckedItems.slice(0,6).join(', ')}
-
-위를 바탕으로 딱 2~3문장으로 코멘트를 남겨줘.
-- 잘 한 것은 인정하되 과하게 칭찬하지 말 것
-- 못 한 것 중 1~2개를 골라 구체적으로 독려할 것
-- 손웅정 스타일: 짧고 묵직하게
-- 반드시 한국어로, 이모지 없이`;
-
+    const prompt = `너는 손웅정 감독처럼 직설적이고 따뜻한 멘토야. 아래는 내가 오늘 이상향을 향해 체크한 만다르트 항목이야.\n\n오늘 한 것 (${checkedItems.length}개): ${checkedItems.length ? checkedItems.join(', ') : '없음'}\n오늘 못 한 것 중 일부: ${uncheckedItems.slice(0,6).join(', ')}\n\n위를 바탕으로 딱 2~3문장으로 코멘트를 남겨줘.\n- 잘 한 것은 인정하되 과하게 칭찬하지 말 것\n- 못 한 것 중 1~2개를 골라 구체적으로 독려할 것\n- 손웅정 스타일: 짧고 묵직하게\n- 반드시 한국어로, 이모지 없이`;
     const res = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-api-key': getApiKey(),
-        'anthropic-version': '2023-06-01',
-        'anthropic-dangerous-direct-browser-access': 'true'
-      },
-      body: JSON.stringify({
-        model: 'claude-sonnet-4-20250514',
-        max_tokens: 1000,
-        messages: [{ role: 'user', content: prompt }]
-      })
+      headers: { 'Content-Type': 'application/json', 'x-api-key': getApiKey(), 'anthropic-version': '2023-06-01', 'anthropic-dangerous-direct-browser-access': 'true' },
+      body: JSON.stringify({ model: 'claude-sonnet-4-20250514', max_tokens: 1000, messages: [{ role: 'user', content: prompt }] })
     });
     const data = await res.json();
-    if (!res.ok) {
-      box.className = 'comment-box loading';
-      box.textContent = `오류 ${res.status}: ${data.error?.message || JSON.stringify(data)}`;
-      btn.disabled = false; btn.textContent = '✦ 다시 받기'; return;
-    }
+    if (!res.ok) { box.className = 'comment-box loading'; box.textContent = `오류 ${res.status}: ${data.error?.message || JSON.stringify(data)}`; btn.disabled = false; btn.textContent = '✦ 다시 받기'; return; }
     const text = data.content?.[0]?.text || '응답을 받지 못했어요.';
-    box.className = 'comment-box';
-    box.textContent = text;
-    // 오늘 날짜로 캐시 저장
+    box.className = 'comment-box'; box.textContent = text;
     localStorage.setItem('mandart_comment_cache', JSON.stringify({ date: getToday(), text }));
-  } catch(e) {
-    box.className = 'comment-box loading';
-    box.textContent = '오류가 발생했어요. 다시 시도해봐요.';
-  }
-  btn.disabled = false;
-  btn.textContent = '✦ 다시 받기';
+  } catch(e) { box.className = 'comment-box loading'; box.textContent = '오류가 발생했어요. 다시 시도해봐요.'; }
+  btn.disabled = false; btn.textContent = '✦ 다시 받기';
 }
 
 // ── 블록 확대 팝업 ──
 const blockOverlay = document.getElementById('blockOverlay');
-const blockGridEl  = document.getElementById('blockGrid');
+const blockGridEl = document.getElementById('blockGrid');
 const blockPopupTitle = document.getElementById('blockPopupTitle');
 const blockNavIndex = document.getElementById('blockNavIndex');
 const blockPrevBtn = document.getElementById('blockPrev');
@@ -1581,54 +1344,35 @@ blockOverlay.addEventListener('click', (e) => { if (e.target === blockOverlay) b
 blockPrevBtn.addEventListener('click', () => { if (currentBlockIdx > 0) openBlockPopup(currentBlockIdx - 1); });
 blockNextBtn.addEventListener('click', () => { if (currentBlockIdx < areas.length - 1) openBlockPopup(currentBlockIdx + 1); });
 
-// 색상 정보 맵
 function openBlockPopup(areaIdx) {
   currentBlockIdx = areaIdx;
   const area = areas[areaIdx];
   const [sr, sc] = blockPositions[areaIdx];
   const colors = areaColorMap[area.id];
-
   blockPopupTitle.textContent = area.title.replace(/\n/g, ' / ');
   blockPopupTitle.style.color = colors.hcol;
   blockNavIndex.textContent = `${areaIdx + 1} / ${areas.length}`;
   blockPrevBtn.disabled = areaIdx === 0;
   blockNextBtn.disabled = areaIdx === areas.length - 1;
-
   blockGridEl.innerHTML = '';
-
   const layout = [0, 1, 2, 3, null, 4, 5, 6, 7];
-
   layout.forEach((itemIdx, pos) => {
     const cell = document.createElement('div');
     cell.className = 'block-cell';
-
     if (itemIdx === null) {
       cell.classList.add('center-cell');
       cell.textContent = area.title.replace(/\n/g, ' / ');
-      cell.style.background = colors.hbg;
-      cell.style.color = colors.hcol;
+      cell.style.background = colors.hbg; cell.style.color = colors.hcol;
     } else {
       const itemText = area.items[itemIdx];
-      cell.style.background = colors.bg;
-      cell.style.color = colors.tcol;
-
-      const r = sr + Math.floor(pos / 3);
-      const c = sc + (pos % 3);
+      cell.style.background = colors.bg; cell.style.color = colors.tcol;
+      const r = sr + Math.floor(pos / 3), c = sc + (pos % 3);
       const key = getCellKey(r, c);
       const cycleDays = getEffectiveCycleDays(itemText, areaIdx, itemIdx);
       const loggable = isLoggable(itemText, areaIdx, itemIdx);
 
-      // 기록 가능한 셀에 dot 표시
-      if (loggable) {
-        const dot = document.createElement('div');
-        dot.className = 'log-dot';
-        dot.title = '기록 가능';
-        cell.appendChild(dot);
-      }
-
-      const textNode = document.createElement('span');
-      textNode.textContent = itemText.replace(/\n/g, ' ');
-      cell.appendChild(textNode);
+      if (loggable) { const dot = document.createElement('div'); dot.className = 'log-dot'; cell.appendChild(dot); }
+      const textNode = document.createElement('span'); textNode.textContent = itemText.replace(/\n/g, ' '); cell.appendChild(textNode);
 
       const applyState = () => {
         const count = clickData[key]?.count || 0;
@@ -1645,22 +1389,16 @@ function openBlockPopup(areaIdx) {
           const d = clickData[key];
           if (d && d.count > 0) {
             clickData[key].count--;
-            if (!clickData[key].count) delete clickData[key];
-            else clickData[key].lastDate = null;
-            saveClicks(); applyState();
-            applyBrightness(cellEls[r][c], key);
-            applyBorder(cellEls[r][c], key, cycleDays);
+            if (!clickData[key].count) delete clickData[key]; else clickData[key].lastDate = null;
+            saveClicks(); applyState(); applyBrightness(cellEls[r][c], key); applyBorder(cellEls[r][c], key, cycleDays);
           }
           lastTapBlock = 0; return;
         }
         lastTapBlock = now;
         if (!isClickable(key, cycleDays)) return;
         clickData[key] = { count: (clickData[key]?.count||0)+1, lastDate: getToday() };
-        saveClicks(); applyState();
-        applyBrightness(cellEls[r][c], key);
-        applyBorder(cellEls[r][c], key, cycleDays);
-        cell.style.transform = 'scale(0.93)';
-        setTimeout(() => { cell.style.transform = ''; }, 150);
+        saveClicks(); applyState(); applyBrightness(cellEls[r][c], key); applyBorder(cellEls[r][c], key, cycleDays);
+        cell.style.transform = 'scale(0.93)'; setTimeout(() => { cell.style.transform = ''; }, 150);
       });
 
       let bPressTimer;
@@ -1684,7 +1422,6 @@ function openBlockPopup(areaIdx) {
     }
     blockGridEl.appendChild(cell);
   });
-
   blockOverlay.classList.add('open');
 }
 
@@ -1695,8 +1432,7 @@ function fixMobileGrid() {
     const cellSize = Math.floor((w - 8) / 9);
     gridEl.style.gridTemplateColumns = `repeat(9, ${cellSize}px)`;
     gridEl.style.gridTemplateRows = `repeat(9, ${cellSize}px)`;
-    gridEl.style.width = w + 'px';
-    gridEl.style.gap = '1px';
+    gridEl.style.width = w + 'px'; gridEl.style.gap = '1px';
   }
 }
 function autoFitCells() {
