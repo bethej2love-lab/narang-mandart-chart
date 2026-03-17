@@ -308,6 +308,17 @@
   .comment-generate-btn:hover { background: #222; }
   .comment-generate-btn:disabled { opacity: 0.4; cursor: not-allowed; }
 
+  /* ── 약점 항목 ── */
+  .weak-item {
+    display: flex; align-items: center; gap: 10px;
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 6px; padding: 9px 12px;
+  }
+  .weak-bar-wrap { flex: 1; height: 3px; background: var(--border); border-radius: 2px; overflow: hidden; }
+  .weak-bar { height: 100%; border-radius: 2px; background: #c04040; transition: width 0.4s ease; }
+  .weak-label { font-size: 11px; color: var(--text); flex: 0 0 auto; max-width: 140px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .weak-pct { font-family: 'IBM Plex Mono', monospace; font-size: 9px; color: #c04040; flex-shrink: 0; width: 28px; text-align: right; }
+
   /* ── 스트릭 + 통계 ── */
   .stats-row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
   .stat-card {
@@ -505,6 +516,12 @@
         <div style="font-size:10px;color:var(--text-dim);margin-top:4px" id="statTodayDetail"></div>
       </div>
     </div>
+    <!-- 이번 주 약점 -->
+    <div id="weakSection">
+      <div class="comment-section-label">이번 주 약점 <span id="weakPeriodLabel" style="color:var(--text-dim);font-size:9px"></span></div>
+      <div id="weakList" style="display:flex;flex-direction:column;gap:6px;"></div>
+    </div>
+
     <div class="period-tabs">
       <button class="period-tab active" data-period="day">오늘</button>
       <button class="period-tab" data-period="week">이번 주</button>
@@ -852,8 +869,9 @@ for (let r = 0; r < 9; r++) {
         const d = clickData[key];
         if (!d || d.count === 0) return;
         clickData[key].count--;
+        // count가 0이 되면 오늘 클릭 취소 → lastDate도 제거
         if (!clickData[key].count) delete clickData[key];
-        else clickData[key].lastDate = null;
+        // count > 0이면 lastDate 유지 (이전 기록 보존)
         saveClicks(); applyBrightness(div, key); applyBorder(div, key, cycleDays);
       };
 
@@ -1138,16 +1156,31 @@ function isStreakDay(dateStr) {
   const dailyItems = getDailyItems();
   if (!dailyItems.length) return false;
   let checked = 0;
-  dailyItems.forEach(({ r, c }) => { if (clickData[getCellKey(r,c)]?.lastDate === dateStr) checked++; });
+  dailyItems.forEach(({ r, c }) => {
+    const key = getCellKey(r, c);
+    const last = clickData[key]?.lastDate;
+    // lastDate가 해당 날짜와 일치하거나, count > 0이고 오늘이면 체크로 인정
+    if (last === dateStr) checked++;
+  });
   return checked >= Math.ceil(dailyItems.length / 2);
 }
+
 function calcStreak() {
   let streak = 0;
-  const d = new Date(getToday() + 'T00:00:00');
-  if (!isStreakDay(getToday())) d.setDate(d.getDate() - 1);
+  const todayStr = getToday();
+  const todayDone = isStreakDay(todayStr);
+
+  // 오늘부터 거슬러 올라가며 연속 체크 확인
+  const d = new Date(todayStr + 'T00:00:00');
+  // 오늘 아직 안 했으면 어제부터, 했으면 오늘부터
+  if (!todayDone) d.setDate(d.getDate() - 1);
+
   while (true) {
     const ds = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
-    if (isStreakDay(ds)) { streak++; d.setDate(d.getDate() - 1); } else break;
+    if (isStreakDay(ds)) {
+      streak++;
+      d.setDate(d.getDate() - 1);
+    } else break;
     if (streak > 365) break;
   }
   return streak;
@@ -1244,6 +1277,47 @@ function renderCheckedList(elId, period) {
   if (!el.children.length) el.innerHTML = `<div style="font-size:11px;color:var(--text-dim)">아직 체크한 항목이 없어요</div>`;
 }
 
+// ── 약점 분석 (최근 7일 일일 항목 체크율) ──
+function getWeakItems(topN = 5) {
+  const today = new Date(getToday() + 'T00:00:00');
+  const past7 = [];
+  for (let i = 0; i < 7; i++) {
+    const d = new Date(today); d.setDate(today.getDate() - i);
+    past7.push(`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`);
+  }
+
+  const results = [];
+  for (let r = 0; r < 9; r++) {
+    for (let c = 0; c < 9; c++) {
+      const cell = grid[r][c];
+      if (!cell || cell.cls.includes('area-header') || cell.cls.includes('center-goal') || cell.cls.includes('center-block')) continue;
+      if (getEffectiveCycleDays(cell.text, cell.areaIdx, cell.itemIdx) !== 1) continue;
+      const key = getCellKey(r, c);
+      const last = clickData[key]?.lastDate;
+      // 지난 7일 중 체크된 날 수
+      const checkedDays = last ? past7.filter(d => d === last).length : 0;
+      // lastDate가 오늘이면 1일, 아니면 0 (일일항목은 마지막 날 하루만 기록됨)
+      // 정확한 7일 추적을 위해 count 대신 lastDate 기준으로 오늘 체크 여부만 알 수 있음
+      // 그래서 "최근 count" 대신 "오늘 안 했는지"로 판단 + 전체 count 기반 체크율 근사
+      const totalCount = clickData[key]?.count || 0;
+      // 존재한 날 수 대비 체크율: count / 7일 기준
+      const pct = Math.round(Math.min(totalCount, 7) / 7 * 100);
+      results.push({
+        label: cell.text.replace(/\n/g, ' '),
+        pct,
+        checkedToday: isClickedToday(key, 1),
+        areaId: cell.cls.split(' ')[0],
+      });
+    }
+  }
+  // 체크율 낮은 순, 오늘도 안 한 것 우선
+  results.sort((a, b) => {
+    if (a.checkedToday !== b.checkedToday) return a.checkedToday ? 1 : -1;
+    return a.pct - b.pct;
+  });
+  return results.slice(0, topN);
+}
+
 let activePeriod = 'day';
 function renderCommentPanel() {
   const d = new Date(), days = ['일','월','화','수','목','금','토'];
@@ -1261,6 +1335,24 @@ function renderCommentPanel() {
   const { pct, checked, total } = getTodayRate();
   document.getElementById('statToday').innerHTML = `${pct} <span>%</span>`;
   document.getElementById('statTodayDetail').textContent = `${checked} / ${total} 완료`;
+
+  // ── A. 약점 렌더 ──
+  const weakList = document.getElementById('weakList');
+  weakList.innerHTML = '';
+  const weakItems = getWeakItems(5);
+  if (weakItems.length === 0) {
+    weakList.innerHTML = `<div style="font-size:11px;color:var(--text-dim)">아직 데이터가 부족해요</div>`;
+  } else {
+    weakItems.forEach(({ label, pct, checkedToday }) => {
+      const color = areaColorMap[areas.find(a => label.includes(a.title.replace(/\n/g,' ').split(' ')[0]))?.id]?.hcol || '#c04040';
+      weakList.innerHTML += `
+        <div class="weak-item">
+          <div class="weak-label" title="${label}">${checkedToday ? '✓ ' : ''}${label}</div>
+          <div class="weak-bar-wrap"><div class="weak-bar" style="width:${pct}%;background:${checkedToday?'#3a7a4a':'#c04040'}"></div></div>
+          <div class="weak-pct" style="color:${checkedToday?'#3a7a4a':'#c04040'}">${pct}%</div>
+        </div>`;
+    });
+  }
 
   document.querySelectorAll('.period-tab').forEach(btn => {
     btn.onclick = () => {
@@ -1306,6 +1398,7 @@ async function generateComment() {
   const box = document.getElementById('commentBox'), btn = document.getElementById('commentGenerateBtn');
   btn.disabled = true; btn.textContent = '생성 중...';
   box.className = 'comment-box loading'; box.textContent = '잠깐, 오늘 하루 살펴보는 중...';
+
   const checkedItems = [], uncheckedItems = [];
   for (let r=0;r<9;r++) for (let c=0;c<9;c++) {
     const cell = grid[r][c];
@@ -1314,8 +1407,28 @@ async function generateComment() {
     const label = cell.text.replace(/\n/g,' ');
     if (isClickedToday(key, cycleDays)) checkedItems.push(label); else uncheckedItems.push(label);
   }
+
+  // C. 약점 데이터 프롬프트에 포함
+  const weakItems = getWeakItems(5);
+  const weakSummary = weakItems
+    .filter(w => !w.checkedToday)
+    .map(w => `${w.label}(${w.pct}%)`)
+    .join(', ');
+
   try {
-    const prompt = `너는 손웅정 감독처럼 직설적이고 따뜻한 멘토야. 아래는 내가 오늘 이상향을 향해 체크한 만다르트 항목이야.\n\n오늘 한 것 (${checkedItems.length}개): ${checkedItems.length ? checkedItems.join(', ') : '없음'}\n오늘 못 한 것 중 일부: ${uncheckedItems.slice(0,6).join(', ')}\n\n위를 바탕으로 딱 2~3문장으로 코멘트를 남겨줘.\n- 잘 한 것은 인정하되 과하게 칭찬하지 말 것\n- 못 한 것 중 1~2개를 골라 구체적으로 독려할 것\n- 손웅정 스타일: 짧고 묵직하게\n- 반드시 한국어로, 이모지 없이`;
+    const prompt = `너는 손웅정 감독처럼 직설적이고 따뜻한 멘토야. 아래는 내가 오늘 이상향을 향해 체크한 만다르트 항목이야.
+
+오늘 한 것 (${checkedItems.length}개): ${checkedItems.length ? checkedItems.join(', ') : '없음'}
+오늘 못 한 것 중 일부: ${uncheckedItems.slice(0,5).join(', ')}
+이번 주 지속적으로 못 하고 있는 약점 항목: ${weakSummary || '없음'}
+
+위를 바탕으로 딱 2~3문장으로 코멘트를 남겨줘.
+- 잘 한 것은 인정하되 과하게 칭찬하지 말 것
+- 약점 항목 중 1~2개를 반드시 구체적으로 짚어서 독려할 것
+- 매일 잘하는 것만 하고 못하는 건 계속 못 하는 패턴을 의식하게 만들 것
+- 손웅정 스타일: 짧고 묵직하게
+- 반드시 한국어로, 이모지 없이`;
+
     const res = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'x-api-key': getApiKey(), 'anthropic-version': '2023-06-01', 'anthropic-dangerous-direct-browser-access': 'true' },
@@ -1389,7 +1502,7 @@ function openBlockPopup(areaIdx) {
           const d = clickData[key];
           if (d && d.count > 0) {
             clickData[key].count--;
-            if (!clickData[key].count) delete clickData[key]; else clickData[key].lastDate = null;
+            if (!clickData[key].count) delete clickData[key];
             saveClicks(); applyState(); applyBrightness(cellEls[r][c], key); applyBorder(cellEls[r][c], key, cycleDays);
           }
           lastTapBlock = 0; return;
