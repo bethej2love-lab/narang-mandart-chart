@@ -139,7 +139,7 @@ transition: color 0.15s; -webkit-tap-highlight-color: transparent;
 .log-panel {
 display: none;
 position: fixed; top: 0; left: 0; right: 0; bottom: 110px;
-background: var(–bg); z-index: 90; overflow-y: auto;
+background: var(–bg); z-index: 150; overflow-y: auto;
 padding: 20px 16px 20px;
 }
 .log-panel.open { display: block; }
@@ -280,7 +280,7 @@ background: rgba(255,255,255,0.3);
 /* ── AI 코멘트 패널 ── */
 .comment-panel {
 display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 110px;
-background: var(–bg); z-index: 90; overflow-y: auto;
+background: var(–bg); z-index: 150; overflow-y: auto;
 padding: 24px 16px 20px;
 }
 .comment-panel.open { display: block; }
@@ -360,7 +360,7 @@ transition: all 0.15s; -webkit-tap-highlight-color: transparent;
 /* ── 설정 패널 ── */
 .settings-panel {
 display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 110px;
-background: var(–bg); z-index: 90; overflow-y: auto;
+background: var(–bg); z-index: 150; overflow-y: auto;
 padding: 24px 16px 20px;
 }
 .settings-panel.open { display: block; }
@@ -1112,24 +1112,36 @@ document.getElementById('settingsSaveBtn').addEventListener('click', () => {
 });
 
 function rebuildGrid() {
-  areas.forEach((area, i) => {
-    const [sr, sc] = blockPositions[i];
-    const pos = [[0,0],[0,1],[0,2],[1,0],[1,1],[1,2],[2,0],[2,1],[2,2]];
-    const sur = [0,1,2,3,5,6,7,8];
+  const sur = [0,1,2,3,5,6,7,8];
+  const pos = [[0,0],[0,1],[0,2],[1,0],[1,1],[1,2],[2,0],[2,1],[2,2]];
+
+  areas.forEach((area, areaIdx) => {
+    const [sr, sc] = blockPositions[areaIdx];
     pos.forEach(([dr,dc], idx) => {
       if (idx !== 4) {
         const itemIdx = sur.indexOf(idx);
-        grid[sr+dr][sc+dc] = { text: area.items[itemIdx], cls: area.id };
+        const r = sr+dr, c = sc+dc;
+        // areaIdx, itemIdx 포함해서 저장
+        grid[r][c] = { text: area.items[itemIdx], cls: area.id, areaIdx, itemIdx };
+        // DOM 직접 업데이트
+        const div = cellEls[r][c];
+        if (!div) return;
+        // 기존 텍스트 노드 제거 후 새로 설정 (dot 등 다른 자식은 유지)
+        const textNodes = [...div.childNodes].filter(n => n.nodeType === 3);
+        if (textNodes.length > 0) {
+          textNodes.forEach(n => n.textContent = area.items[itemIdx].replace(/\n/g, '\n'));
+        } else {
+          // span으로 된 경우
+          const spans = div.querySelectorAll('span');
+          if (spans.length > 0) {
+            spans[0].textContent = area.items[itemIdx].replace(/\n/g, ' ');
+          } else {
+            div.textContent = area.items[itemIdx].replace(/\n/g, '\n');
+          }
+        }
       }
     });
   });
-  for (let r = 0; r < 9; r++) for (let c = 0; c < 9; c++) {
-    const cell = grid[r][c]; const div = cellEls[r][c];
-    if (!cell || !div) continue;
-    if (cell.cls.includes('area-header') || cell.cls.includes('center-goal') || cell.cls.includes('center-block')) continue;
-    div.childNodes.forEach(n => { if (n.nodeType === 3) n.textContent = cell.text.replace(/\\n/g,'\n'); });
-    if (!div.childNodes.length) div.textContent = cell.text.replace(/\\n/g,'\n');
-  }
   autoFitCells();
 }
 
