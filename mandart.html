@@ -638,6 +638,12 @@ function fillBlock(sr, sc, area, areaIdx) {
     else { const itemIdx = sur.indexOf(idx); grid[r][c] = { text: area.items[itemIdx], cls: area.id, areaIdx, itemIdx }; }
   });
 }
+// 커스텀 아이템을 fillBlock 전에 먼저 불러오기
+try {
+  const saved = JSON.parse(localStorage.getItem('mandart_custom_items'));
+  if (saved) saved.forEach((items, i) => { if (areas[i]) areas[i].items = items; });
+} catch(e) {}
+
 fillBlock(0,0,areas[0],0); fillBlock(0,3,areas[1],1); fillBlock(0,6,areas[2],2);
 fillBlock(3,0,areas[3],3); fillBlock(3,6,areas[4],4);
 fillBlock(6,0,areas[5],5); fillBlock(6,3,areas[6],6); fillBlock(6,6,areas[7],7);
