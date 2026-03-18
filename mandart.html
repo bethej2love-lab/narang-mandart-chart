@@ -1085,24 +1085,42 @@ function renderSettingsPanel() {
   });
 }
 
-// 자동 줄바꿈: 공백 기준으로 나누되 한 줄 최대 6자
+// 자동 줄바꿈: 한 줄 최소 2자, 최대 7자 기준
 function autoWrap(text) {
   const clean = text.replace(/\\n/g, ' ').replace(/\n/g, ' ').trim();
-  if (clean.length <= 6) return clean;
+  if (clean.length <= 7) return clean;
 
-  // 공백 기준으로 단어 분리
-  const words = clean.split(' ');
+  const words = clean.split(' ').filter(w => w.length > 0);
+
   if (words.length >= 2) {
-    // 단어가 여러 개면 앞절반/뒷절반으로 나눔
-    const mid = Math.ceil(words.length / 2);
-    const line1 = words.slice(0, mid).join(' ');
-    const line2 = words.slice(mid).join(' ');
-    if (line2) return line1 + '\n' + line2;
+    // 단어 조합 중 가장 균형잡힌 분할점 찾기
+    let bestSplit = 1;
+    let bestDiff = Infinity;
+    for (let i = 1; i < words.length; i++) {
+      const line1 = words.slice(0, i).join(' ');
+      const line2 = words.slice(i).join(' ');
+      // 두 줄 다 2자 이상이어야 함
+      if (line1.length < 2 || line2.length < 2) continue;
+      const diff = Math.abs(line1.length - line2.length);
+      if (diff < bestDiff) { bestDiff = diff; bestSplit = i; }
+    }
+    const l1 = words.slice(0, bestSplit).join(' ');
+    const l2 = words.slice(bestSplit).join(' ');
+    // l2가 너무 길면 3줄로
+    if (l2.length > 8 && words.length >= 3) {
+      const mid1 = Math.ceil(words.length / 3);
+      const mid2 = Math.ceil(words.length * 2 / 3);
+      const a = words.slice(0, mid1).join(' ');
+      const b = words.slice(mid1, mid2).join(' ');
+      const c = words.slice(mid2).join(' ');
+      if (a.length >= 2 && b.length >= 2 && c.length >= 2) return `${a}\n${b}\n${c}`;
+    }
+    return `${l1}\n${l2}`;
   }
 
-  // 단어 구분 없이 긴 경우 6자 기준으로 자르기
-  if (clean.length <= 10) return clean.slice(0, Math.ceil(clean.length/2)) + '\n' + clean.slice(Math.ceil(clean.length/2));
-  return clean.slice(0, 6) + '\n' + clean.slice(6, 12) + (clean.length > 12 ? '\n' + clean.slice(12) : '');
+  // 단어 없이 긴 문자열: 균등 2분할 (각 줄 2자 이상)
+  const half = Math.round(clean.length / 2);
+  return clean.slice(0, half) + '\n' + clean.slice(half);
 }
 
 document.getElementById('settingsSaveBtn').addEventListener('click', () => {
