@@ -496,6 +496,7 @@
   <div class="settings-title">항목 편집</div>
   <div id="settingsContent"></div>
   <button class="settings-save-btn" id="settingsSaveBtn">저장하기</button>
+  <button class="settings-save-btn" id="settingsResetBtn" style="margin-top:8px;background:#2a1010;color:#c08080;border:1px solid #4a2020;">항목 원래대로 초기화</button>
 </div>
 <div class="settings-saved-toast" id="settingsToast">저장됐어요 ✓</div>
 
@@ -1141,6 +1142,15 @@ document.getElementById('settingsSaveBtn').addEventListener('click', () => {
   const toast = document.getElementById('settingsToast');
   toast.classList.add('show');
   setTimeout(() => toast.classList.remove('show'), 2000);
+});
+
+document.getElementById('settingsResetBtn').addEventListener('click', () => {
+  showConfirm('항목을 원래대로 초기화할까요? 텍스트와 주기가 기본값으로 돌아가요', () => {
+    localStorage.removeItem('mandart_custom_items');
+    localStorage.removeItem('mandart_custom_cycles');
+    localStorage.removeItem('mandart_custom_loggable');
+    location.reload();
+  });
 });
 
 function rebuildGrid() {
