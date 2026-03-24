@@ -493,10 +493,14 @@
 
 <!-- 설정 패널 -->
 <div class="settings-panel" id="settingsPanel">
-  <div class="settings-title">항목 편집</div>
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;position:sticky;top:0;background:#080809;padding:4px 0;z-index:10;">
+    <div>
+      <div class="settings-title" style="margin-bottom:2px">항목 편집</div>
+      <div style="font-size:9px;color:#505054;font-family:'IBM Plex Mono',monospace">/ 로 줄바꿈 위치 지정</div>
+    </div>
+    <button class="settings-save-btn" id="settingsSaveBtn" style="width:auto;padding:10px 20px;margin:0;">저장하기</button>
+  </div>
   <div id="settingsContent"></div>
-  <button class="settings-save-btn" id="settingsSaveBtn">저장하기</button>
-  <button class="settings-save-btn" id="settingsResetBtn" style="margin-top:8px;background:#2a1010;color:#c08080;border:1px solid #4a2020;">항목 원래대로 초기화</button>
 </div>
 <div class="settings-saved-toast" id="settingsToast">저장됐어요 ✓</div>
 
@@ -1046,7 +1050,8 @@ function renderSettingsPanel() {
       const input = document.createElement('input');
       input.className = 'settings-item-input';
       input.type = 'text';
-      input.value = item.replace(/\n/g, ' ');
+      input.value = item.replace(/\n/g, '/'); // \n → /로 표시
+      input.placeholder = '/ 로 줄바꿈';
       input.dataset.areaIdx = areaIdx;
       input.dataset.itemIdx = itemIdx;
 
@@ -1123,7 +1128,14 @@ document.getElementById('settingsSaveBtn').addEventListener('click', () => {
   document.querySelectorAll('.settings-item-input').forEach(input => {
     const aIdx = parseInt(input.dataset.areaIdx), iIdx = parseInt(input.dataset.itemIdx);
     const newText = input.value.trim();
-    if (newText) areas[aIdx].items[iIdx] = autoWrap(newText);
+    if (newText) {
+      // /가 있으면 그걸 줄바꿈으로, 없으면 autoWrap으로 자동 처리
+      if (newText.includes('/')) {
+        areas[aIdx].items[iIdx] = newText.replace(/\//g, '\n');
+      } else {
+        areas[aIdx].items[iIdx] = autoWrap(newText);
+      }
+    }
   });
   document.querySelectorAll('.settings-cycle-select').forEach(select => {
     const aIdx = parseInt(select.dataset.areaIdx), iIdx = parseInt(select.dataset.itemIdx);
@@ -1142,15 +1154,6 @@ document.getElementById('settingsSaveBtn').addEventListener('click', () => {
   const toast = document.getElementById('settingsToast');
   toast.classList.add('show');
   setTimeout(() => toast.classList.remove('show'), 2000);
-});
-
-document.getElementById('settingsResetBtn').addEventListener('click', () => {
-  showConfirm('항목을 원래대로 초기화할까요? 텍스트와 주기가 기본값으로 돌아가요', () => {
-    localStorage.removeItem('mandart_custom_items');
-    localStorage.removeItem('mandart_custom_cycles');
-    localStorage.removeItem('mandart_custom_loggable');
-    location.reload();
-  });
 });
 
 function rebuildGrid() {
