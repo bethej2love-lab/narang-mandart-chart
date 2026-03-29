@@ -201,6 +201,55 @@
   .modal-btn.confirm:hover { background: #333; }
   .modal-btn.cancel { background: transparent; color: #505054; border: 1px solid #1e1e20; }
 
+  /* ── 달력 팝업 ── */
+  .cal-overlay {
+    display: none; position: fixed; inset: 0;
+    background: rgba(0,0,0,0.75); z-index: 450;
+    align-items: flex-end; justify-content: center;
+  }
+  .cal-overlay.open { display: flex; }
+  .cal-popup {
+    background: #141415; border: 1px solid #1e1e20;
+    border-radius: 12px 12px 0 0;
+    padding: 20px 20px 32px; width: 100%; max-width: 600px;
+  }
+  .cal-header {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: 16px;
+  }
+  .cal-title { font-size: 13px; font-weight: 600; color: #e8e8e8; }
+  .cal-cell-name { font-size: 11px; color: #505054; margin-bottom: 16px; }
+  .cal-nav {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: 12px;
+  }
+  .cal-nav-btn {
+    border: none; background: transparent; color: #505054;
+    font-size: 20px; cursor: pointer; padding: 4px 10px;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .cal-nav-btn:hover { color: #e8e8e8; }
+  .cal-month-label { font-size: 12px; color: #e8e8e8; font-family: 'IBM Plex Mono', monospace; }
+  .cal-grid {
+    display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px;
+    margin-bottom: 16px;
+  }
+  .cal-day-label {
+    text-align: center; font-size: 9px; color: #505054;
+    font-family: 'IBM Plex Mono', monospace; padding: 4px 0;
+  }
+  .cal-day {
+    text-align: center; font-size: 12px; padding: 8px 4px;
+    border-radius: 6px; cursor: pointer; color: #888;
+    -webkit-tap-highlight-color: transparent; transition: background 0.1s;
+  }
+  .cal-day:hover { background: #2a2a2a; color: #e8e8e8; }
+  .cal-day.today { color: #d4a853; font-weight: 600; }
+  .cal-day.selected { background: #2a2a2a; color: #e8e8e8; outline: 1.5px solid rgba(255,255,255,0.6); border-radius: 6px; }
+  .cal-day.checked { background: #1a2a1a; color: #00c870; }
+  .cal-day.empty { cursor: default; }
+  .cal-close { border: none; background: transparent; color: #505054; font-size: 20px; cursor: pointer; }
+
   /* ── 확인 팝업 (5. 삭제 확인) ── */
   .confirm-overlay {
     display: none; position: fixed; inset: 0;
@@ -568,7 +617,26 @@
       <button class="block-nav-btn" id="blockNext">›</button>
     </div>
     <div class="block-grid" id="blockGrid"></div>
-    <div class="block-popup-hint">탭 → 체크 · 두 번 탭 → 취소 · 길게 → 기록</div>
+    <div class="block-popup-hint">탭 → 체크 · 두 번 탭 → 취소 · 📅 탭 → 날짜 선택</div>
+  </div>
+</div>
+
+<!-- 달력 팝업 -->
+<div class="cal-overlay" id="calOverlay">
+  <div class="cal-popup">
+    <div class="cal-header">
+      <div>
+        <div class="cal-title">날짜 선택</div>
+        <div class="cal-cell-name" id="calCellName"></div>
+      </div>
+      <button class="cal-close" id="calClose">×</button>
+    </div>
+    <div class="cal-nav">
+      <button class="cal-nav-btn" id="calPrev">‹</button>
+      <div class="cal-month-label" id="calMonthLabel"></div>
+      <button class="cal-nav-btn" id="calNext">›</button>
+    </div>
+    <div class="cal-grid" id="calGrid"></div>
   </div>
 </div>
 
@@ -774,6 +842,79 @@ function openModal(cellText, areaId, onSave, prefillDate, prefillComment, isEdit
   setTimeout(() => modalComment.focus(), 300);
 }
 
+// ── 달력 팝업 ──
+let calYear, calMonth, calCallback, calKey, calCellText, calAreaId, calCheckedDates = new Set();
+const calOverlay = document.getElementById('calOverlay');
+const calGrid = document.getElementById('calGrid');
+const calMonthLabel = document.getElementById('calMonthLabel');
+
+document.getElementById('calClose').addEventListener('click', () => calOverlay.classList.remove('open'));
+calOverlay.addEventListener('click', (e) => { if (e.target === calOverlay) calOverlay.classList.remove('open'); });
+document.getElementById('calPrev').addEventListener('click', () => { calMonth--; if (calMonth < 0) { calMonth = 11; calYear--; } renderCal(); });
+document.getElementById('calNext').addEventListener('click', () => { calMonth++; if (calMonth > 11) { calMonth = 0; calYear++; } renderCal(); });
+
+function openCalendar(cellText, areaId, key, onDateSelected) {
+  const today = new Date();
+  calYear = today.getFullYear();
+  calMonth = today.getMonth();
+  calKey = key;
+  calCellText = cellText;
+  calAreaId = areaId;
+  calCallback = onDateSelected;
+  document.getElementById('calCellName').textContent = cellText.replace(/\n/g, ' ');
+
+  // 이미 기록된 날짜 수집
+  calCheckedDates = new Set(
+    logData.filter(l => l.key === key).map(l => l.date)
+  );
+
+  renderCal();
+  calOverlay.classList.add('open');
+}
+
+function renderCal() {
+  const months = ['1월','2월','3월','4월','5월','6월','7월','8월','9월','10월','11월','12월'];
+  calMonthLabel.textContent = `${calYear}년 ${months[calMonth]}`;
+  calGrid.innerHTML = '';
+
+  const dayLabels = ['일','월','화','수','목','금','토'];
+  dayLabels.forEach(d => {
+    const el = document.createElement('div');
+    el.className = 'cal-day-label';
+    el.textContent = d;
+    calGrid.appendChild(el);
+  });
+
+  const firstDay = new Date(calYear, calMonth, 1).getDay();
+  const lastDate = new Date(calYear, calMonth + 1, 0).getDate();
+  const todayStr = getToday();
+
+  // 빈 칸
+  for (let i = 0; i < firstDay; i++) {
+    const el = document.createElement('div');
+    el.className = 'cal-day empty';
+    calGrid.appendChild(el);
+  }
+
+  for (let d = 1; d <= lastDate; d++) {
+    const dateStr = `${calYear}-${String(calMonth+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+    const el = document.createElement('div');
+    el.className = 'cal-day';
+    el.textContent = d;
+    if (dateStr === todayStr) el.classList.add('today');
+    if (calCheckedDates.has(dateStr)) el.classList.add('checked');
+
+    el.addEventListener('click', () => {
+      calOverlay.classList.remove('open');
+      // 날짜 선택 후 메모 입력 모달
+      openModal(calCellText, calAreaId, (date, comment) => {
+        calCallback(dateStr, comment);
+      }, dateStr, '', false);
+    });
+    calGrid.appendChild(el);
+  }
+}
+
 // ── 기록 패널 ──
 const areaNames = ['인성/품격','자기관리/루틴','독서/지식','체력/건강','커리어/실력','경제력/재정','철학/가치관','창의성/예술'];
 const areaIds = areas.map(a => a.id);
@@ -895,6 +1036,25 @@ for (let r = 0; r < 9; r++) {
         const now = Date.now();
         if (now - lastTap < 300) { undoClick(); lastTap = 0; return; }
         lastTap = now;
+
+        // loggable 항목은 달력 팝업으로
+        if (loggable) {
+          openCalendar(cell.text, areaId, key, (date, comment) => {
+            // 체크 처리
+            if (isClickable(key, cycleDays)) {
+              clickData[key] = { count: (clickData[key]?.count||0)+1, lastDate: date };
+              saveClicks(); applyBrightness(div, key); applyBorder(div, key, cycleDays);
+              if (isStreakDay(getToday())) recordStreakToday();
+            }
+            // 기록 저장
+            logData.push({ key, cellText: cell.text, areaId, date, comment });
+            saveLogs();
+            if (activeFilter !== 'all' && activeFilter !== areaId) activeFilter = 'all';
+            renderLogs();
+          });
+          return;
+        }
+
         if (!isClickable(key, cycleDays)) return;
         clickData[key] = { count: (clickData[key]?.count||0)+1, lastDate: getToday() };
         saveClicks(); applyBrightness(div, key); applyBorder(div, key, cycleDays);
@@ -903,27 +1063,15 @@ for (let r = 0; r < 9; r++) {
         setTimeout(()=>{ div.style.transform=''; }, 150);
       });
 
-      // 2. 텍스트 선택 방지 + 길게 누르기 기록
-      let pressTimer;
-      div.addEventListener('touchstart', (e) => {
-        pressTimer = setTimeout(() => {
-          if (loggable) {
-            openModal(cell.text, areaId, (date, comment) => {
-              logData.push({ key, cellText: cell.text, areaId, date, comment });
-              saveLogs();
-              if (activeFilter !== 'all' && activeFilter !== areaId) activeFilter = 'all';
-              renderLogs();
-            });
-          }
-        }, 600);
-      }, { passive: true });
-      div.addEventListener('touchend', () => clearTimeout(pressTimer));
-      div.addEventListener('touchmove', () => clearTimeout(pressTimer));
-
+      // 우클릭 (데스크탑) - loggable이면 달력 팝업
       div.addEventListener('contextmenu', (e) => {
         e.preventDefault();
         if (loggable) {
-          openModal(cell.text, areaId, (date, comment) => {
+          openCalendar(cell.text, areaId, key, (date, comment) => {
+            if (isClickable(key, cycleDays)) {
+              clickData[key] = { count: (clickData[key]?.count||0)+1, lastDate: date };
+              saveClicks(); applyBrightness(div, key); applyBorder(div, key, cycleDays);
+            }
             logData.push({ key, cellText: cell.text, areaId, date, comment });
             saveLogs(); renderLogs();
           });
@@ -1612,6 +1760,21 @@ function openBlockPopup(areaIdx) {
           lastTapBlock = 0; return;
         }
         lastTapBlock = now;
+
+        // loggable 항목은 달력 팝업
+        if (loggable) {
+          openCalendar(itemText, area.id, key, (date, comment) => {
+            if (isClickable(key, cycleDays)) {
+              clickData[key] = { count: (clickData[key]?.count||0)+1, lastDate: date };
+              saveClicks(); applyState(); applyBrightness(cellEls[r][c], key); applyBorder(cellEls[r][c], key, cycleDays);
+              if (isStreakDay(getToday())) recordStreakToday();
+            }
+            logData.push({ key, cellText: itemText, areaId: area.id, date, comment });
+            saveLogs(); renderLogs();
+          });
+          return;
+        }
+
         if (!isClickable(key, cycleDays)) return;
         clickData[key] = { count: (clickData[key]?.count||0)+1, lastDate: getToday() };
         saveClicks(); applyState(); applyBrightness(cellEls[r][c], key); applyBorder(cellEls[r][c], key, cycleDays);
@@ -1619,23 +1782,19 @@ function openBlockPopup(areaIdx) {
         cell.style.transform = 'scale(0.93)'; setTimeout(() => { cell.style.transform = ''; }, 150);
       });
 
-      let bPressTimer;
-      cell.addEventListener('touchstart', () => {
-        bPressTimer = setTimeout(() => {
-          if (loggable) openModal(itemText, area.id, (date, comment) => {
+      // 우클릭 (데스크탑)
+      cell.addEventListener('contextmenu', (e) => {
+        e.preventDefault();
+        if (loggable) {
+          openCalendar(itemText, area.id, key, (date, comment) => {
+            if (isClickable(key, cycleDays)) {
+              clickData[key] = { count: (clickData[key]?.count||0)+1, lastDate: date };
+              saveClicks(); applyState(); applyBrightness(cellEls[r][c], key); applyBorder(cellEls[r][c], key, cycleDays);
+            }
             logData.push({ key, cellText: itemText, areaId: area.id, date, comment });
             saveLogs(); renderLogs();
           });
-        }, 600);
-      }, { passive: true });
-      cell.addEventListener('touchend', () => clearTimeout(bPressTimer));
-      cell.addEventListener('touchmove', () => clearTimeout(bPressTimer));
-      cell.addEventListener('contextmenu', (e) => {
-        e.preventDefault();
-        if (loggable) openModal(itemText, area.id, (date, comment) => {
-          logData.push({ key, cellText: itemText, areaId: area.id, date, comment });
-          saveLogs(); renderLogs();
-        });
+        }
       });
     }
     blockGridEl.appendChild(cell);
