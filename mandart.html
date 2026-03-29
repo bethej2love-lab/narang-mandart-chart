@@ -188,6 +188,7 @@
     border-radius: 4px; color: #e8e8e8; font-family: 'IBM Plex Sans KR', sans-serif;
     font-size: 12px; padding: 10px 12px; outline: none;
     -webkit-user-select: text; user-select: text;
+    box-sizing: border-box; max-width: 100%;
   }
   .modal input[type="date"]:focus, .modal textarea:focus { border-color: #444; }
   .modal textarea { resize: none; height: 80px; line-height: 1.5; }
@@ -1032,26 +1033,31 @@ for (let r = 0; r < 9; r++) {
       div.addEventListener('dblclick', (e) => { e.preventDefault(); undoClick(); });
 
       let lastTap = 0;
+      let tapTimer = null;
       div.addEventListener('click', (e) => {
         const now = Date.now();
-        if (now - lastTap < 300) { undoClick(); lastTap = 0; return; }
+        if (now - lastTap < 300) {
+          // 더블탭 → 취소
+          clearTimeout(tapTimer);
+          undoClick(); lastTap = 0; return;
+        }
         lastTap = now;
 
-        // loggable 항목은 달력 팝업으로
         if (loggable) {
-          openCalendar(cell.text, areaId, key, (date, comment) => {
-            // 체크 처리
-            if (isClickable(key, cycleDays)) {
-              clickData[key] = { count: (clickData[key]?.count||0)+1, lastDate: date };
-              saveClicks(); applyBrightness(div, key); applyBorder(div, key, cycleDays);
-              if (isStreakDay(getToday())) recordStreakToday();
-            }
-            // 기록 저장
-            logData.push({ key, cellText: cell.text, areaId, date, comment });
-            saveLogs();
-            if (activeFilter !== 'all' && activeFilter !== areaId) activeFilter = 'all';
-            renderLogs();
-          });
+          // 싱글탭 확정 후 달력 열기 (더블탭이면 위에서 취소됨)
+          tapTimer = setTimeout(() => {
+            openCalendar(cell.text, areaId, key, (date, comment) => {
+              if (isClickable(key, cycleDays)) {
+                clickData[key] = { count: (clickData[key]?.count||0)+1, lastDate: date };
+                saveClicks(); applyBrightness(div, key); applyBorder(div, key, cycleDays);
+                if (isStreakDay(getToday())) recordStreakToday();
+              }
+              logData.push({ key, cellText: cell.text, areaId, date, comment });
+              saveLogs();
+              if (activeFilter !== 'all' && activeFilter !== areaId) activeFilter = 'all';
+              renderLogs();
+            });
+          }, 300);
           return;
         }
 
