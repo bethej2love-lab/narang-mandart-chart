@@ -1407,7 +1407,7 @@ function isStreakDay(dateStr) {
     const last = clickData[key]?.lastDate;
     if (last === dateStr) checked++;
   });
-  return checked >= Math.ceil(dailyItems.length / 2);
+  return checked >= Math.ceil(dailyItems.length * 0.6);
 }
 
 function calcStreak() {
