@@ -202,6 +202,12 @@
   .modal-btn.confirm { background: #2a2a2a; color: #e8e8e8; }
   .modal-btn.confirm:hover { background: #333; }
   .modal-btn.cancel { background: transparent; color: #505054; border: 1px solid #1e1e20; }
+  .modal-btn.skip {
+    background: transparent; color: #505054;
+    border: 1px solid #1e1e20; flex: 0 0 auto; padding: 12px 14px;
+    font-size: 11px;
+  }
+  .modal-btn.skip:hover { color: #888; border-color: #333; }
 
   /* ── 달력 팝업 ── */
   .cal-overlay {
@@ -653,6 +659,7 @@
     <textarea id="modalComment" placeholder="예) 완독. 생각보다 어렵지 않았다."></textarea>
     <div class="modal-btns">
       <button class="modal-btn cancel" id="modalCancel">취소</button>
+      <button class="modal-btn skip" id="modalSkip">메모 없이 체크</button>
       <button class="modal-btn confirm" id="modalConfirm">저장</button>
     </div>
   </div>
@@ -827,18 +834,25 @@ const modalComment = document.getElementById('modalComment');
 const modalCellName = document.getElementById('modalCellName');
 const modalTitle = document.getElementById('modalTitle');
 
-document.getElementById('modalCancel').addEventListener('click', () => { modalOverlay.classList.remove('open'); editingLogIdx = null; });
+function closeModal() { modalOverlay.classList.remove('open'); editingLogIdx = null; modalCallback = null; }
+
+document.getElementById('modalCancel').addEventListener('click', closeModal);
 document.getElementById('modalConfirm').addEventListener('click', () => {
   if (modalCallback) modalCallback(modalDate.value, modalComment.value.trim());
-  modalOverlay.classList.remove('open'); editingLogIdx = null;
+  closeModal();
 });
-modalOverlay.addEventListener('click', (e) => { if (e.target === modalOverlay) { modalOverlay.classList.remove('open'); editingLogIdx = null; } });
+document.getElementById('modalSkip').addEventListener('click', () => {
+  if (modalCallback) modalCallback(modalDate.value, '');
+  closeModal();
+});
+modalOverlay.addEventListener('click', (e) => { if (e.target === modalOverlay) closeModal(); });
 
 function openModal(cellText, areaId, onSave, prefillDate, prefillComment, isEdit) {
   modalTitle.textContent = isEdit ? '기록 수정' : '기록 남기기';
   modalCellName.textContent = cellText.replace(/\n/g, ' ');
   modalDate.value = prefillDate || getToday();
   modalComment.value = prefillComment || '';
+  document.getElementById('modalSkip').style.display = isEdit ? 'none' : '';
   modalCallback = (date, comment) => onSave(date, comment);
   modalOverlay.classList.add('open');
   setTimeout(() => modalComment.focus(), 300);
