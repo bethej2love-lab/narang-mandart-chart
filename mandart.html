@@ -1,5 +1,4 @@
 <!DOCTYPE html>
-
 <html lang="ko">
 <head>
 <meta charset="UTF-8">
@@ -203,13 +202,6 @@
   .modal-btn.confirm { background: #2a2a2a; color: #e8e8e8; }
   .modal-btn.confirm:hover { background: #333; }
   .modal-btn.cancel { background: transparent; color: #505054; border: 1px solid #1e1e20; }
-  /* ── 메모 건너뛰기 버튼 ── */
-  .modal-btn.skip {
-    background: transparent; color: #505054;
-    border: 1px solid #1e1e20; flex: 0 0 auto; padding: 12px 14px;
-    font-size: 11px;
-  }
-  .modal-btn.skip:hover { color: #888; border-color: #333; }
 
   /* ── 달력 팝업 ── */
   .cal-overlay {
@@ -505,7 +497,6 @@
   .apikey-reset { font-size: 10px; color: #555; cursor: pointer; text-decoration: underline; background: none; border: none; }
   .apikey-reset:hover { color: #888; }
 </style>
-
 </head>
 <body>
 
@@ -580,9 +571,9 @@
         <div style="font-size:10px;color:#505054;margin-top:4px" id="statTodayDetail"></div>
       </div>
     </div>
-    <!-- 이번 주 약점 -->
+    <!-- 최근 약점 -->
     <div id="weakSection">
-      <div class="comment-section-label">이번 주 약점 <span id="weakPeriodLabel" style="color:#505054;font-size:9px"></span></div>
+      <div class="comment-section-label">최근 약점 <span id="weakPeriodLabel" style="color:#505054;font-size:9px"></span></div>
       <div id="weakList" style="display:flex;flex-direction:column;gap:6px;"></div>
     </div>
 
@@ -658,11 +649,10 @@
     <div class="modal-cell-name" id="modalCellName"></div>
     <label>날짜</label>
     <input type="date" id="modalDate">
-    <label>메모 <span style="color:#303034">(선택)</span></label>
+    <label>메모 (선택)</label>
     <textarea id="modalComment" placeholder="예) 완독. 생각보다 어렵지 않았다."></textarea>
     <div class="modal-btns">
       <button class="modal-btn cancel" id="modalCancel">취소</button>
-      <button class="modal-btn skip" id="modalSkip">메모 없이 체크</button>
       <button class="modal-btn confirm" id="modalConfirm">저장</button>
     </div>
   </div>
@@ -837,27 +827,18 @@ const modalComment = document.getElementById('modalComment');
 const modalCellName = document.getElementById('modalCellName');
 const modalTitle = document.getElementById('modalTitle');
 
-function closeModal() { modalOverlay.classList.remove('open'); editingLogIdx = null; modalCallback = null; }
-
-document.getElementById('modalCancel').addEventListener('click', closeModal);
+document.getElementById('modalCancel').addEventListener('click', () => { modalOverlay.classList.remove('open'); editingLogIdx = null; });
 document.getElementById('modalConfirm').addEventListener('click', () => {
   if (modalCallback) modalCallback(modalDate.value, modalComment.value.trim());
-  closeModal();
+  modalOverlay.classList.remove('open'); editingLogIdx = null;
 });
-// ── 메모 없이 체크 버튼 ──
-document.getElementById('modalSkip').addEventListener('click', () => {
-  if (modalCallback) modalCallback(modalDate.value, '');
-  closeModal();
-});
-modalOverlay.addEventListener('click', (e) => { if (e.target === modalOverlay) closeModal(); });
+modalOverlay.addEventListener('click', (e) => { if (e.target === modalOverlay) { modalOverlay.classList.remove('open'); editingLogIdx = null; } });
 
 function openModal(cellText, areaId, onSave, prefillDate, prefillComment, isEdit) {
   modalTitle.textContent = isEdit ? '기록 수정' : '기록 남기기';
   modalCellName.textContent = cellText.replace(/\n/g, ' ');
   modalDate.value = prefillDate || getToday();
   modalComment.value = prefillComment || '';
-  // 수정 모드일 땐 건너뛰기 숨김 (이미 저장된 항목이므로)
-  document.getElementById('modalSkip').style.display = isEdit ? 'none' : '';
   modalCallback = (date, comment) => onSave(date, comment);
   modalOverlay.classList.add('open');
   setTimeout(() => modalComment.focus(), 300);
@@ -884,6 +865,7 @@ function openCalendar(cellText, areaId, key, onDateSelected) {
   calCallback = onDateSelected;
   document.getElementById('calCellName').textContent = cellText.replace(/\n/g, ' ');
 
+  // 이미 기록된 날짜 수집
   calCheckedDates = new Set(
     logData.filter(l => l.key === key).map(l => l.date)
   );
@@ -909,6 +891,7 @@ function renderCal() {
   const lastDate = new Date(calYear, calMonth + 1, 0).getDate();
   const todayStr = getToday();
 
+  // 빈 칸
   for (let i = 0; i < firstDay; i++) {
     const el = document.createElement('div');
     el.className = 'cal-day empty';
@@ -925,6 +908,7 @@ function renderCal() {
 
     el.addEventListener('click', () => {
       calOverlay.classList.remove('open');
+      // 날짜 선택 후 메모 입력 모달
       openModal(calCellText, calAreaId, (date, comment) => {
         calCallback(dateStr, comment);
       }, dateStr, '', false);
@@ -961,6 +945,7 @@ function renderLogs() {
   }).join('');
 }
 
+// 4. 메모 수정
 function editLog(idx) {
   const log = logData[idx];
   if (!log) return;
@@ -972,6 +957,7 @@ function editLog(idx) {
   }, log.date, log.comment, true);
 }
 
+// 5. 삭제 확인
 function confirmDeleteLog(idx) {
   showConfirm('이 기록을 삭제할까요?', () => {
     logData.splice(idx, 1);
@@ -1039,7 +1025,9 @@ for (let r = 0; r < 9; r++) {
         const d = clickData[key];
         if (!d || d.count === 0) return;
         clickData[key].count--;
+        // count가 0이 되면 오늘 클릭 취소 → lastDate도 제거
         if (!clickData[key].count) delete clickData[key];
+        // count > 0이면 lastDate 유지 (이전 기록 보존)
         saveClicks(); applyBrightness(div, key); applyBorder(div, key, cycleDays);
       };
 
@@ -1050,12 +1038,14 @@ for (let r = 0; r < 9; r++) {
       div.addEventListener('click', (e) => {
         const now = Date.now();
         if (now - lastTap < 300) {
+          // 더블탭 → 취소
           clearTimeout(tapTimer);
           undoClick(); lastTap = 0; return;
         }
         lastTap = now;
 
         if (loggable) {
+          // 싱글탭 확정 후 달력 열기 (더블탭이면 위에서 취소됨)
           tapTimer = setTimeout(() => {
             openCalendar(cell.text, areaId, key, (date, comment) => {
               if (isClickable(key, cycleDays)) {
@@ -1080,6 +1070,7 @@ for (let r = 0; r < 9; r++) {
         setTimeout(()=>{ div.style.transform=''; }, 150);
       });
 
+      // 우클릭 (데스크탑) - loggable이면 달력 팝업
       div.addEventListener('contextmenu', (e) => {
         e.preventDefault();
         if (loggable) {
@@ -1136,7 +1127,7 @@ areas.forEach((area, i) => {
   i < 6 ? tabRow1.appendChild(btn) : tabRow2.appendChild(btn);
 });
 
-tabRow2.appendChild(document.createElement('div'));
+tabRow2.appendChild(document.createElement('div')); // 빈칸
 
 const commentPanel = document.getElementById('commentPanel');
 let commentPanelOpen = false;
@@ -1214,7 +1205,7 @@ function renderSettingsPanel() {
       const input = document.createElement('input');
       input.className = 'settings-item-input';
       input.type = 'text';
-      input.value = item.replace(/\n/g, '/');
+      input.value = item.replace(/\n/g, '/'); // \n → /로 표시
       input.placeholder = '/ 로 줄바꿈';
       input.dataset.areaIdx = areaIdx;
       input.dataset.itemIdx = itemIdx;
@@ -1250,26 +1241,40 @@ function renderSettingsPanel() {
   });
 }
 
+// 자동 줄바꿈: 한 줄 최소 2자, 최대 7자 기준
 function autoWrap(text) {
   const clean = text.replace(/\\n/g, ' ').replace(/\n/g, ' ').trim();
   if (clean.length <= 7) return clean;
+
   const words = clean.split(' ').filter(w => w.length > 0);
+
   if (words.length >= 2) {
-    let bestSplit = 1, bestDiff = Infinity;
+    // 단어 조합 중 가장 균형잡힌 분할점 찾기
+    let bestSplit = 1;
+    let bestDiff = Infinity;
     for (let i = 1; i < words.length; i++) {
-      const line1 = words.slice(0, i).join(' '), line2 = words.slice(i).join(' ');
+      const line1 = words.slice(0, i).join(' ');
+      const line2 = words.slice(i).join(' ');
+      // 두 줄 다 2자 이상이어야 함
       if (line1.length < 2 || line2.length < 2) continue;
       const diff = Math.abs(line1.length - line2.length);
       if (diff < bestDiff) { bestDiff = diff; bestSplit = i; }
     }
-    const l1 = words.slice(0, bestSplit).join(' '), l2 = words.slice(bestSplit).join(' ');
+    const l1 = words.slice(0, bestSplit).join(' ');
+    const l2 = words.slice(bestSplit).join(' ');
+    // l2가 너무 길면 3줄로
     if (l2.length > 8 && words.length >= 3) {
-      const mid1 = Math.ceil(words.length / 3), mid2 = Math.ceil(words.length * 2 / 3);
-      const a = words.slice(0, mid1).join(' '), b = words.slice(mid1, mid2).join(' '), c = words.slice(mid2).join(' ');
+      const mid1 = Math.ceil(words.length / 3);
+      const mid2 = Math.ceil(words.length * 2 / 3);
+      const a = words.slice(0, mid1).join(' ');
+      const b = words.slice(mid1, mid2).join(' ');
+      const c = words.slice(mid2).join(' ');
       if (a.length >= 2 && b.length >= 2 && c.length >= 2) return `${a}\n${b}\n${c}`;
     }
     return `${l1}\n${l2}`;
   }
+
+  // 단어 없이 긴 문자열: 균등 2분할 (각 줄 2자 이상)
   const half = Math.round(clean.length / 2);
   return clean.slice(0, half) + '\n' + clean.slice(half);
 }
@@ -1279,6 +1284,7 @@ document.getElementById('settingsSaveBtn').addEventListener('click', () => {
     const aIdx = parseInt(input.dataset.areaIdx), iIdx = parseInt(input.dataset.itemIdx);
     const newText = input.value.trim();
     if (newText) {
+      // /가 있으면 그걸 줄바꿈으로, 없으면 autoWrap으로 자동 처리
       if (newText.includes('/')) {
         areas[aIdx].items[iIdx] = newText.replace(/\//g, '\n');
       } else {
@@ -1308,22 +1314,30 @@ document.getElementById('settingsSaveBtn').addEventListener('click', () => {
 function rebuildGrid() {
   const sur = [0,1,2,3,5,6,7,8];
   const pos = [[0,0],[0,1],[0,2],[1,0],[1,1],[1,2],[2,0],[2,1],[2,2]];
+
   areas.forEach((area, areaIdx) => {
     const [sr, sc] = blockPositions[areaIdx];
     pos.forEach(([dr,dc], idx) => {
       if (idx !== 4) {
         const itemIdx = sur.indexOf(idx);
         const r = sr+dr, c = sc+dc;
+        // areaIdx, itemIdx 포함해서 저장
         grid[r][c] = { text: area.items[itemIdx], cls: area.id, areaIdx, itemIdx };
+        // DOM 직접 업데이트
         const div = cellEls[r][c];
         if (!div) return;
+        // 기존 텍스트 노드 제거 후 새로 설정 (dot 등 다른 자식은 유지)
         const textNodes = [...div.childNodes].filter(n => n.nodeType === 3);
         if (textNodes.length > 0) {
           textNodes.forEach(n => n.textContent = area.items[itemIdx].replace(/\n/g, '\n'));
         } else {
+          // span으로 된 경우
           const spans = div.querySelectorAll('span');
-          if (spans.length > 0) spans[0].textContent = area.items[itemIdx].replace(/\n/g, ' ');
-          else div.textContent = area.items[itemIdx].replace(/\n/g, '\n');
+          if (spans.length > 0) {
+            spans[0].textContent = area.items[itemIdx].replace(/\n/g, ' ');
+          } else {
+            div.textContent = area.items[itemIdx].replace(/\n/g, '\n');
+          }
         }
       }
     });
@@ -1366,7 +1380,9 @@ function getDailyItems() {
   return items;
 }
 function isStreakDay(dateStr) {
+  // streakHistory에 기록이 있으면 우선 사용
   if (streakHistory[dateStr]) return true;
+  // 없으면 기존 방식으로 fallback (마이그레이션용)
   const dailyItems = getDailyItems();
   if (!dailyItems.length) return false;
   let checked = 0;
@@ -1382,12 +1398,18 @@ function calcStreak() {
   let streak = 0;
   const todayStr = getToday();
   const todayDone = isStreakDay(todayStr);
+
+  // 오늘부터 거슬러 올라가며 연속 체크 확인
   const d = new Date(todayStr + 'T00:00:00');
+  // 오늘 아직 안 했으면 어제부터, 했으면 오늘부터
   if (!todayDone) d.setDate(d.getDate() - 1);
+
   while (true) {
     const ds = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
-    if (isStreakDay(ds)) { streak++; d.setDate(d.getDate() - 1); }
-    else break;
+    if (isStreakDay(ds)) {
+      streak++;
+      d.setDate(d.getDate() - 1);
+    } else break;
     if (streak > 365) break;
   }
   return streak;
@@ -1484,26 +1506,35 @@ function renderCheckedList(elId, period) {
   if (!el.children.length) el.innerHTML = `<div style="font-size:11px;color:#505054">아직 체크한 항목이 없어요</div>`;
 }
 
-// ── 약점 분석 ──
+// ── 약점 분석 (최근 14일 일일 항목 체크율) ──
 function getWeakItems(topN = 5) {
   const today = new Date(getToday() + 'T00:00:00');
-  const past7 = [];
-  for (let i = 0; i < 7; i++) {
+  const past14 = [];
+  for (let i = 0; i < 14; i++) {
     const d = new Date(today); d.setDate(today.getDate() - i);
-    past7.push(`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`);
+    past14.push(`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`);
   }
+
   const results = [];
   for (let r = 0; r < 9; r++) {
     for (let c = 0; c < 9; c++) {
       const cell = grid[r][c];
       if (!cell || cell.cls.includes('area-header') || cell.cls.includes('center-goal') || cell.cls.includes('center-block')) continue;
+      if (!cell.text || cell.text.trim() === '') continue;
       if (getEffectiveCycleDays(cell.text, cell.areaIdx, cell.itemIdx) !== 1) continue;
       const key = getCellKey(r, c);
       const totalCount = clickData[key]?.count || 0;
-      const pct = Math.round(Math.min(totalCount, 7) / 7 * 100);
-      results.push({ label: cell.text.replace(/\n/g, ' '), pct, checkedToday: isClickedToday(key, 1), areaId: cell.cls.split(' ')[0] });
+      // 최근 14일 기준 체크율
+      const pct = Math.round(Math.min(totalCount, 14) / 14 * 100);
+      results.push({
+        label: cell.text.replace(/\n/g, ' '),
+        pct,
+        checkedToday: isClickedToday(key, 1),
+        areaId: cell.cls.split(' ')[0],
+      });
     }
   }
+  // 체크율 낮은 순, 오늘도 안 한 것 우선
   results.sort((a, b) => {
     if (a.checkedToday !== b.checkedToday) return a.checkedToday ? 1 : -1;
     return a.pct - b.pct;
@@ -1529,6 +1560,7 @@ function renderCommentPanel() {
   document.getElementById('statToday').innerHTML = `${pct} <span>%</span>`;
   document.getElementById('statTodayDetail').textContent = `${checked} / ${total} 완료`;
 
+  // ── A. 약점 렌더 ──
   const weakList = document.getElementById('weakList');
   weakList.innerHTML = '';
   const weakItems = getWeakItems(5);
@@ -1536,6 +1568,7 @@ function renderCommentPanel() {
     weakList.innerHTML = `<div style="font-size:11px;color:#505054">아직 데이터가 부족해요</div>`;
   } else {
     weakItems.forEach(({ label, pct, checkedToday }) => {
+      const color = areaColorMap[areas.find(a => label.includes(a.title.replace(/\n/g,' ').split(' ')[0]))?.id]?.hcol || '#c04040';
       weakList.innerHTML += `
         <div class="weak-item">
           <div class="weak-label" title="${label}">${checkedToday ? '✓ ' : ''}${label}</div>
@@ -1604,15 +1637,19 @@ async function generateComment() {
     if (isClickedToday(key, cycleDays)) checkedItems.push(label); else uncheckedItems.push(label);
   }
 
+  // C. 약점 데이터 프롬프트에 포함
   const weakItems = getWeakItems(5);
-  const weakSummary = weakItems.filter(w => !w.checkedToday).map(w => `${w.label}(${w.pct}%)`).join(', ');
+  const weakSummary = weakItems
+    .filter(w => !w.checkedToday)
+    .map(w => `${w.label}(${w.pct}%)`)
+    .join(', ');
 
   try {
     const prompt = `너는 손웅정 감독처럼 직설적이고 따뜻한 멘토야. 아래는 내가 오늘 이상향을 향해 체크한 만다르트 항목이야.
 
 오늘 한 것 (${checkedItems.length}개): ${checkedItems.length ? checkedItems.join(', ') : '없음'}
 오늘 못 한 것 중 일부: ${uncheckedItems.slice(0,5).join(', ')}
-이번 주 지속적으로 못 하고 있는 약점 항목: ${weakSummary || '없음'}
+최근 2주 지속적으로 못 하고 있는 약점 항목: ${weakSummary || '없음'}
 
 위를 바탕으로 딱 2~3문장으로 코멘트를 남겨줘.
 - 잘 한 것은 인정하되 과하게 칭찬하지 말 것
@@ -1649,18 +1686,28 @@ blockOverlay.addEventListener('click', (e) => { if (e.target === blockOverlay) b
 blockPrevBtn.addEventListener('click', () => openBlockPopup((currentBlockIdx - 1 + areas.length) % areas.length));
 blockNextBtn.addEventListener('click', () => openBlockPopup((currentBlockIdx + 1) % areas.length));
 
+// 스와이프 제스처
 const blockPopupEl = document.querySelector('.block-popup');
 let swipeStartX = 0, swipeStartY = 0, swipeLocked = false;
-blockPopupEl.addEventListener('touchstart', (e) => { swipeStartX = e.touches[0].clientX; swipeStartY = e.touches[0].clientY; swipeLocked = false; }, { passive: true });
+blockPopupEl.addEventListener('touchstart', (e) => {
+  swipeStartX = e.touches[0].clientX;
+  swipeStartY = e.touches[0].clientY;
+  swipeLocked = false;
+}, { passive: true });
 blockPopupEl.addEventListener('touchmove', (e) => {
-  const dx = e.touches[0].clientX - swipeStartX, dy = e.touches[0].clientY - swipeStartY;
-  if (!swipeLocked && Math.abs(dx) > Math.abs(dy) && Math.abs(dx) > 10) { swipeLocked = true; e.preventDefault(); }
+  const dx = e.touches[0].clientX - swipeStartX;
+  const dy = e.touches[0].clientY - swipeStartY;
+  if (!swipeLocked && Math.abs(dx) > Math.abs(dy) && Math.abs(dx) > 10) {
+    swipeLocked = true;
+    e.preventDefault(); // 배경 스크롤 방지
+  }
 }, { passive: false });
 blockPopupEl.addEventListener('touchend', (e) => {
-  const dx = e.changedTouches[0].clientX - swipeStartX, dy = e.changedTouches[0].clientY - swipeStartY;
+  const dx = e.changedTouches[0].clientX - swipeStartX;
+  const dy = e.changedTouches[0].clientY - swipeStartY;
   if (Math.abs(dx) > Math.abs(dy) && Math.abs(dx) > 50) {
-    if (dx < 0) openBlockPopup((currentBlockIdx + 1) % areas.length);
-    if (dx > 0) openBlockPopup((currentBlockIdx - 1 + areas.length) % areas.length);
+    if (dx < 0) openBlockPopup((currentBlockIdx + 1) % areas.length); // 왼쪽 → 다음 (8에서 1로)
+    if (dx > 0) openBlockPopup((currentBlockIdx - 1 + areas.length) % areas.length); // 오른쪽 → 이전 (1에서 8로)
   }
 }, { passive: true });
 
@@ -1716,6 +1763,7 @@ function openBlockPopup(areaIdx) {
         }
         lastTapBlock = now;
 
+        // loggable 항목은 달력 팝업
         if (loggable) {
           openCalendar(itemText, area.id, key, (date, comment) => {
             if (isClickable(key, cycleDays)) {
@@ -1736,6 +1784,7 @@ function openBlockPopup(areaIdx) {
         cell.style.transform = 'scale(0.93)'; setTimeout(() => { cell.style.transform = ''; }, 150);
       });
 
+      // 우클릭 (데스크탑)
       cell.addEventListener('contextmenu', (e) => {
         e.preventDefault();
         if (loggable) {
@@ -1759,7 +1808,8 @@ function openBlockPopup(areaIdx) {
 function fixMobileGrid() {
   if (window.innerWidth <= 700) {
     const w = document.documentElement.clientWidth;
-    const gap = 1, totalGap = gap * 8;
+    const gap = 1;
+    const totalGap = gap * 8; // 9칸 사이 gap은 8개
     const cellSize = Math.floor((w - totalGap) / 9);
     gridEl.style.gridTemplateColumns = `repeat(9, ${cellSize}px)`;
     gridEl.style.gridTemplateRows = `repeat(9, ${cellSize}px)`;
@@ -1778,6 +1828,5 @@ function autoFitCells() {
 fixMobileGrid(); autoFitCells();
 window.addEventListener('resize', ()=>{ fixMobileGrid(); autoFitCells(); });
 </script>
-
 </body>
 </html>
