@@ -1,4 +1,5 @@
 <!DOCTYPE html>
+
 <html lang="ko">
 <head>
 <meta charset="UTF-8">
@@ -8,54 +9,63 @@
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@300;400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
   :root {
-    --bg: #080809;
-    --surface: #0f0f10;
-    --border: #1e1e20;
-    --accent: #d4a853;
-    --text: #e8e8e8;
-    --text-dim: #505054;
-    --center-bg: #100e06;
-
-    --c1: #12101c; --h1: #9080bc; --h1b: #1a1628;
-    --c2: #001a10; --h2: #00c870; --h2b: #002a18;
-    --c3: #1a0e00; --h3: #e07830; --h3b: #281400;
-    --c4: #001418; --h4: #00b4d0; --h4b: #001e26;
-    --c5: #1a0010; --h5: #e0306a; --h5b: #280018;
-    --c6: #141200; --h6: #c8b800; --h6b: #201e00;
-    --c7: #001418; --h7: #3090e0; --h7b: #001a28;
-    --c8: #0e1800; --h8: #70c020; --h8b: #142200;
+    --bg:        #07070c;
+    --surface:   #0d0d14;
+    --surface-2: #13131c;
+    --surface-3: #191924;
+    --border:       rgba(255,255,255,0.06);
+    --border-mid:   rgba(255,255,255,0.10);
+    --border-hi:    rgba(255,255,255,0.18);
+    --text:     #efefef;
+    --text-2:   #9898aa;
+    --text-dim: #42424e;
+    --accent:     #d4a853;
+    --accent-dim: rgba(212,168,83,0.12);
+    --c1:#12101c; --h1:#a090cc; --h1b:#1c1930;
+    --c2:#061812; --h2:#2ec87a; --h2b:#0c2a1e;
+    --c3:#1c0e00; --h3:#e08840; --h3b:#2c1800;
+    --c4:#041418; --h4:#18b8d4; --h4b:#082030;
+    --c5:#1c0012; --h5:#e04878; --h5b:#2c0820;
+    --c6:#141000; --h6:#c8b830; --h6b:#201c00;
+    --c7:#041418; --h7:#4898e4; --h7b:#082030;
+    --c8:#0c1800; --h8:#7cc430; --h8b:#162400;
+    --ease: cubic-bezier(0.25, 0.46, 0.45, 0.94);
+    --spring: cubic-bezier(0.34, 1.56, 0.64, 1);
   }
 
   * { box-sizing: border-box; margin: 0; padding: 0; }
 
   body {
-    background: #080809;
-    color: #e8e8e8;
+    background: var(--bg);
+    color: var(--text);
     font-family: 'IBM Plex Sans KR', sans-serif;
     min-height: 100vh;
     display: flex;
     flex-direction: column;
     align-items: center;
-    padding: 52px 0 88px;
+    padding: 56px 0 100px;
     -webkit-user-select: none;
     user-select: none;
   }
 
-  .header { text-align: center; margin-bottom: 36px; padding: 0 24px; }
-  .header-sub { font-family: 'IBM Plex Mono', monospace; font-size: 9px; letter-spacing: 4px; color: #505054; text-transform: uppercase; margin-bottom: 16px; }
-  .header h1 { font-family: 'IBM Plex Sans KR', sans-serif; font-size: clamp(22px, 3.5vw, 32px); font-weight: 300; color: #d0d0d0; letter-spacing: -2px; line-height: 1; }
-  .header h1 span { color: #d0d0d0; font-weight: 500; }
-  .header-line { width: 20px; height: 1px; background: #d4a853; margin: 18px auto 0; opacity: 0.5; }
+  .header { text-align: center; margin-bottom: 32px; padding: 0 24px; }
+  .header-sub { font-family: 'IBM Plex Mono', monospace; font-size: 9px; letter-spacing: 5px; color: var(--text-dim); text-transform: uppercase; margin-bottom: 14px; }
+  .header h1 { font-size: clamp(24px, 3.5vw, 34px); font-weight: 300; color: var(--text); letter-spacing: -2.5px; line-height: 1; }
+  .header h1 span { font-weight: 500; }
+  .header-line { width: 24px; height: 1.5px; background: linear-gradient(90deg, transparent, var(--accent), transparent); margin: 16px auto 0; }
 
   .mandart-wrapper { width: 100%; max-width: 900px; }
 
   .mandart-grid {
     display: grid;
     grid-template-columns: repeat(9, 1fr);
-    gap: 1px;
-    background: #000;
+    gap: 1.5px;
+    background: rgba(255,255,255,0.03);
     width: 100%;
     aspect-ratio: 1 / 1;
+    border-radius: 16px;
+    overflow: hidden;
+    box-shadow: 0 0 0 1px var(--border), 0 32px 64px rgba(0,0,0,0.6);
   }
 
   .cell {
@@ -64,445 +74,245 @@
     font-family: 'IBM Plex Sans KR', sans-serif;
     font-size: clamp(7px, 0.85vw, 10px);
     font-weight: 400; line-height: 1.35;
-    color: #505054; background: #0f0f10;
-    transition: filter 0.1s; cursor: default;
+    color: var(--text-dim); background: var(--surface);
+    transition: filter 0.15s var(--ease); cursor: default;
     word-break: keep-all; overflow: hidden;
     -webkit-touch-callout: none;
   }
-  .cell:hover { filter: brightness(1.6); z-index: 2; position: relative; }
-  .cell.area-header { font-weight: 600; font-size: clamp(8px, 0.95vw, 11px); color: #e0e0e0; letter-spacing: -0.3px; }
-  .cell.center-goal { background: #100e06 !important; outline: 1px solid #555; outline-offset: -1px; font-weight: 500; font-size: clamp(9px, 1.1vw, 13px); color: #d0d0d0 !important; letter-spacing: -0.5px; z-index: 3; }
+  .cell:hover { filter: brightness(1.7); z-index: 2; position: relative; }
+  .cell.area-header { font-weight: 600; font-size: clamp(8px, 0.95vw, 11px); color: rgba(240,240,240,0.9); letter-spacing: -0.3px; }
+  .cell.center-goal { background: #0e0c06 !important; outline: 1px solid rgba(212,168,83,0.3); outline-offset: -1px; font-weight: 500; font-size: clamp(9px, 1.1vw, 13px); color: rgba(212,168,83,0.9) !important; letter-spacing: -0.5px; z-index: 3; }
 
-  .a1 { background: #12101c; color: #7060a0; } .a1.area-header { background: #1a1628; color: #9080bc; }
-  .a2 { background: #001a10; color: #00905a; } .a2.area-header { background: #002a18; color: #00c870; }
-  .a3 { background: #1a0e00; color: #a05820; } .a3.area-header { background: #281400; color: #e07830; }
-  .a4 { background: #001418; color: #008498; } .a4.area-header { background: #001e26; color: #00b4d0; }
-  .center-block { background: #0c0b04; color: #888; } .center-block.area-header { background: #100e06; color: #c0c0c0; font-weight: 500; font-size: clamp(7px, 0.85vw, 10px); }
-  .a5 { background: #1a0010; color: #a02050; } .a5.area-header { background: #280018; color: #e0306a; }
-  .a6 { background: #141200; color: #908600; } .a6.area-header { background: #201e00; color: #c8b800; }
-  .a7 { background: #001418; color: #2068a8; } .a7.area-header { background: #001a28; color: #3090e0; }
-  .a8 { background: #0e1800; color: #508a10; } .a8.area-header { background: #142200; color: #70c020; }
+  .a1 { background: #0f0e18; color: #6858a0; } .a1.area-header { background: #181628; color: var(--h1); }
+  .a2 { background: #051510; color: #1a7848; } .a2.area-header { background: #0a2418; color: var(--h2); }
+  .a3 { background: #180c00; color: #9a6020; } .a3.area-header { background: #261200; color: var(--h3); }
+  .a4 { background: #031216; color: #107888; } .a4.area-header { background: #071c28; color: var(--h4); }
+  .center-block { background: #0a0904; color: #686860; } .center-block.area-header { background: #0e0d06; color: rgba(200,200,180,0.8); font-weight: 500; font-size: clamp(7px, 0.85vw, 10px); }
+  .a5 { background: #180010; color: #901848; } .a5.area-header { background: #260618; color: var(--h5); }
+  .a6 { background: #120e00; color: #808000; } .a6.area-header { background: #1e1800; color: var(--h6); }
+  .a7 { background: #031216; color: #285888; } .a7.area-header { background: #071824; color: var(--h7); }
+  .a8 { background: #0a1600; color: #406810; } .a8.area-header { background: #101e00; color: var(--h8); }
 
   @media (max-width: 700px) {
-    body { align-items: stretch; padding: 36px 0 90px; }
-    .header { margin-bottom: 20px; }
-    .mandart-wrapper { width: 100%; }
-    .mandart-grid { aspect-ratio: unset; gap: 1px; }
+    body { align-items: stretch; padding: 32px 0 100px; }
+    .header { margin-bottom: 16px; }
+    .mandart-wrapper { width: 100%; padding: 0 10px; }
+    .mandart-grid { border-radius: 12px; gap: 1px; aspect-ratio: unset; }
     .cell { font-size: 7px; padding: 1px; line-height: 1.15; word-break: break-all; }
     .cell.area-header { font-size: 8px; word-break: keep-all; }
     .cell.center-goal { font-size: 9px; }
   }
 
-  @keyframes pulse { 0% { filter: brightness(1); } 45% { filter: brightness(2.5); } 100% { filter: brightness(1); } }
-  .cell.highlighted { animation: pulse 0.65s ease; }
+  @keyframes pulse { 0%,100% { filter: brightness(1); } 50% { filter: brightness(2.2); } }
+  .cell.highlighted { animation: pulse 0.6s var(--ease); }
 
-  .footer {
-    margin-top: 24px; margin-bottom: 20px;
-    font-family: 'IBM Plex Mono', monospace;
-    font-size: 9px; color: #505054; opacity: 0.35;
-    letter-spacing: 0.5px; width: 100%; text-align: center;
-  }
-  .today-date {
-    font-family: 'IBM Plex Mono', monospace;
-    font-size: 9px; color: #505054;
-    letter-spacing: 1.5px; opacity: 0.5;
-    text-align: center; margin-bottom: 10px;
-  }
+  .footer { margin-top: 28px; font-family: 'IBM Plex Mono', monospace; font-size: 9px; color: var(--text-dim); opacity: 0.3; letter-spacing: 1px; width: 100%; text-align: center; }
+
+  .today-date { font-family: 'IBM Plex Mono', monospace; font-size: 9px; color: var(--text-dim); letter-spacing: 2px; opacity: 0.7; text-align: center; margin-bottom: 12px; }
 
   /* ── Tab nav ── */
   .tab-nav {
     position: fixed; bottom: 0; left: 0; right: 0;
-    background: rgba(8,8,9,0.96);
-    border-top: 1px solid #1e1e20;
+    background: rgba(7,7,12,0.88);
+    border-top: 1px solid var(--border);
     display: grid; grid-template-columns: repeat(5, 1fr);
     z-index: 100;
     padding-bottom: env(safe-area-inset-bottom);
-    backdrop-filter: blur(8px);
+    backdrop-filter: blur(24px) saturate(180%);
+    -webkit-backdrop-filter: blur(24px) saturate(180%);
   }
   .tab-btn {
     display: flex; flex-direction: column; align-items: center; justify-content: center;
-    padding: 9px 4px 8px; gap: 5px; cursor: pointer; border: none;
-    background: transparent; color: #505054;
+    padding: 10px 4px 9px; gap: 5px; cursor: pointer; border: none;
+    background: transparent; color: var(--text-dim);
     font-family: 'IBM Plex Sans KR', sans-serif; font-size: 9px; font-weight: 400;
-    transition: color 0.15s; -webkit-tap-highlight-color: transparent;
+    transition: color 0.2s var(--ease); -webkit-tap-highlight-color: transparent;
   }
-  .tab-btn:active { opacity: 0.4; }
+  .tab-btn:active { opacity: 0.5; }
   .tab-dot { width: 5px; height: 5px; border-radius: 50%; }
-  .tab-btn.active { color: #c8c8c8; }
+  .tab-btn.active { color: var(--text); }
 
   /* ── 기록 패널 ── */
   .log-panel {
-    display: none;
-    position: fixed; top: 0; left: 0; right: 0; bottom: 110px;
-    background: #080809; z-index: 150; overflow-y: auto;
-    padding: 20px 16px 20px;
+    display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 110px;
+    background: var(--bg); z-index: 150; overflow-y: auto; padding: 24px 18px 20px;
   }
   .log-panel.open { display: block; }
-  .log-panel-title { font-size: 13px; font-weight: 600; color: #e8e8e8; margin-bottom: 16px; letter-spacing: -0.3px; }
-  .log-filter { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 16px; }
-  .log-filter-btn {
-    padding: 4px 10px; border-radius: 20px; border: 1px solid #1e1e20;
-    background: transparent; color: #505054; font-size: 10px;
-    font-family: 'IBM Plex Sans KR', sans-serif; cursor: pointer;
-    -webkit-tap-highlight-color: transparent;
-  }
-  .log-filter-btn.active { background: #0f0f10; color: #e8e8e8; border-color: #444; }
+  .log-panel-title { font-size: 20px; font-weight: 600; color: var(--text); margin-bottom: 20px; letter-spacing: -0.6px; }
+  .log-filter { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 18px; }
+  .log-filter-btn { padding: 5px 12px; border-radius: 20px; border: 1px solid var(--border-mid); background: transparent; color: var(--text-2); font-size: 11px; font-family: 'IBM Plex Sans KR', sans-serif; cursor: pointer; -webkit-tap-highlight-color: transparent; transition: all 0.15s; }
+  .log-filter-btn.active { background: var(--surface-2); color: var(--text); border-color: var(--border-hi); }
   .log-list { display: flex; flex-direction: column; gap: 8px; }
-  .log-item {
-    background: #0f0f10; border: 1px solid #1e1e20;
-    border-radius: 4px; padding: 12px 14px;
-    display: flex; flex-direction: column; gap: 4px;
-  }
+  .log-item { background: var(--surface-2); border: 1px solid var(--border); border-radius: 12px; padding: 14px 16px; display: flex; flex-direction: column; gap: 5px; }
   .log-item-header { display: flex; justify-content: space-between; align-items: center; }
-  .log-item-title { font-size: 11px; font-weight: 500; color: #e8e8e8; }
-  .log-item-date { font-family: 'IBM Plex Mono', monospace; font-size: 10px; color: #505054; }
-  .log-item-comment { font-size: 11px; color: #888; margin-top: 2px; }
-  /* 4. 메모 수정/삭제 버튼 */
-  .log-item-actions { display: flex; gap: 4px; }
-  .log-item-edit, .log-item-delete {
-    font-size: 10px; color: #444; cursor: pointer;
-    padding: 2px 6px; border: none; background: transparent;
-  }
-  .log-item-edit:hover { color: #6090d0; }
-  .log-item-delete:hover { color: #c04040; }
-  .log-empty { font-size: 11px; color: #505054; text-align: center; padding: 40px 0; }
+  .log-item-title { font-size: 12px; font-weight: 500; color: var(--text); }
+  .log-item-date { font-family: 'IBM Plex Mono', monospace; font-size: 10px; color: var(--text-dim); }
+  .log-item-comment { font-size: 11px; color: var(--text-2); margin-top: 2px; line-height: 1.5; }
+  .log-item-actions { display: flex; gap: 2px; }
+  .log-item-edit, .log-item-delete { font-size: 10px; color: var(--text-dim); cursor: pointer; padding: 3px 8px; border: none; background: transparent; border-radius: 6px; transition: all 0.15s; }
+  .log-item-edit:hover { color: #6090d0; background: rgba(96,144,208,0.1); }
+  .log-item-delete:hover { color: #e06060; background: rgba(224,96,96,0.1); }
+  .log-empty { font-size: 12px; color: var(--text-dim); text-align: center; padding: 48px 0; }
 
   /* ── 기록 입력/수정 모달 ── */
   .modal-overlay {
     display: none; position: fixed; inset: 0;
-    background: rgba(0,0,0,0.7); z-index: 400;
-    align-items: flex-end; justify-content: center;
+    background: rgba(0,0,0,0.6); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
+    z-index: 400; align-items: flex-end; justify-content: center;
   }
   .modal-overlay.open { display: flex; }
-  .modal {
-    background: #141415; border: 1px solid #1e1e20;
-    border-radius: 12px 12px 0 0;
-    padding: 20px 20px 32px; width: 100%; max-width: 600px;
-    overflow: hidden;
-  }
-  .modal-title { font-size: 13px; font-weight: 600; color: #e8e8e8; margin-bottom: 4px; }
-  .modal-cell-name { font-size: 11px; color: #505054; margin-bottom: 16px; }
-  .modal label { font-size: 10px; color: #505054; display: block; margin-bottom: 6px; margin-top: 12px; }
-  .modal input[type="date"], .modal textarea {
-    width: 100%; background: #0f0f10; border: 1px solid #1e1e20;
-    border-radius: 4px; color: #e8e8e8; font-family: 'IBM Plex Sans KR', sans-serif;
-    font-size: 12px; padding: 10px 12px; outline: none;
-    -webkit-user-select: text; user-select: text;
-    box-sizing: border-box; min-width: 0;
-    -webkit-appearance: none; appearance: none;
-  }
-  .modal input[type="date"]:focus, .modal textarea:focus { border-color: #444; }
-  .modal textarea { resize: none; height: 80px; line-height: 1.5; }
-  .modal-btns { display: flex; gap: 8px; margin-top: 16px; }
-  .modal-btn {
-    flex: 1; padding: 12px; border-radius: 4px; border: none;
-    font-family: 'IBM Plex Sans KR', sans-serif; font-size: 12px;
-    font-weight: 500; cursor: pointer;
-  }
-  .modal-btn.confirm { background: #2a2a2a; color: #e8e8e8; }
-  .modal-btn.confirm:hover { background: #333; }
-  .modal-btn.cancel { background: transparent; color: #505054; border: 1px solid #1e1e20; }
-  .modal-btn.skip {
-    background: transparent; color: #505054;
-    border: 1px solid #1e1e20; flex: 0 0 auto; padding: 12px 14px;
-    font-size: 11px;
-  }
-  .modal-btn.skip:hover { color: #888; border-color: #333; }
+  .modal { background: var(--surface-2); border: 1px solid var(--border-mid); border-radius: 24px 24px 0 0; padding: 12px 22px 36px; width: 100%; max-width: 600px; overflow: hidden; }
+  .modal-title { font-size: 17px; font-weight: 600; color: var(--text); margin-bottom: 4px; letter-spacing: -0.4px; }
+  .modal-cell-name { font-size: 12px; color: var(--text-2); margin-bottom: 20px; }
+  .modal label { font-size: 11px; color: var(--text-dim); display: block; margin-bottom: 8px; margin-top: 14px; letter-spacing: 0.3px; }
+  .modal input[type="date"], .modal textarea { width: 100%; background: var(--surface); border: 1px solid var(--border-mid); border-radius: 10px; color: var(--text); font-family: 'IBM Plex Sans KR', sans-serif; font-size: 13px; padding: 12px 14px; outline: none; -webkit-user-select: text; user-select: text; box-sizing: border-box; min-width: 0; -webkit-appearance: none; appearance: none; transition: border-color 0.15s; }
+  .modal input[type="date"]:focus, .modal textarea:focus { border-color: var(--border-hi); }
+  .modal textarea { resize: none; height: 88px; line-height: 1.6; }
+  .modal-btns { display: flex; gap: 8px; margin-top: 18px; }
+  .modal-btn { flex: 1; padding: 13px; border-radius: 12px; border: none; font-family: 'IBM Plex Sans KR', sans-serif; font-size: 13px; font-weight: 500; cursor: pointer; transition: all 0.15s; }
+  .modal-btn.confirm { background: var(--surface-3); color: var(--text); }
+  .modal-btn.confirm:hover { background: #222230; }
+  .modal-btn.cancel { background: transparent; color: var(--text-2); border: 1px solid var(--border-mid); }
+  .modal-btn.skip { background: transparent; color: var(--text-dim); border: 1px solid var(--border); flex: 0 0 auto; padding: 13px 14px; font-size: 12px; }
+  .modal-btn.skip:hover { color: var(--text-2); border-color: var(--border-mid); }
 
   /* ── 달력 팝업 ── */
-  .cal-overlay {
-    display: none; position: fixed; inset: 0;
-    background: rgba(0,0,0,0.75); z-index: 450;
-    align-items: flex-end; justify-content: center;
-  }
+  .cal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.6); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); z-index: 450; align-items: flex-end; justify-content: center; }
   .cal-overlay.open { display: flex; }
-  .cal-popup {
-    background: #141415; border: 1px solid #1e1e20;
-    border-radius: 12px 12px 0 0;
-    padding: 20px 20px 32px; width: 100%; max-width: 600px;
-  }
-  .cal-header {
-    display: flex; align-items: center; justify-content: space-between;
-    margin-bottom: 16px;
-  }
-  .cal-title { font-size: 13px; font-weight: 600; color: #e8e8e8; }
-  .cal-cell-name { font-size: 11px; color: #505054; margin-bottom: 16px; }
-  .cal-nav {
-    display: flex; align-items: center; justify-content: space-between;
-    margin-bottom: 12px;
-  }
-  .cal-nav-btn {
-    border: none; background: transparent; color: #505054;
-    font-size: 20px; cursor: pointer; padding: 4px 10px;
-    -webkit-tap-highlight-color: transparent;
-  }
-  .cal-nav-btn:hover { color: #e8e8e8; }
-  .cal-month-label { font-size: 12px; color: #e8e8e8; font-family: 'IBM Plex Mono', monospace; }
-  .cal-grid {
-    display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px;
-    margin-bottom: 16px;
-  }
-  .cal-day-label {
-    text-align: center; font-size: 9px; color: #505054;
-    font-family: 'IBM Plex Mono', monospace; padding: 4px 0;
-  }
-  .cal-day {
-    text-align: center; font-size: 12px; padding: 8px 4px;
-    border-radius: 6px; cursor: pointer; color: #888;
-    -webkit-tap-highlight-color: transparent; transition: background 0.1s;
-  }
-  .cal-day:hover { background: #2a2a2a; color: #e8e8e8; }
-  .cal-day.today { color: #d4a853; font-weight: 600; }
-  .cal-day.selected { background: #2a2a2a; color: #e8e8e8; outline: 1.5px solid rgba(255,255,255,0.6); border-radius: 6px; }
-  .cal-day.checked { background: #1a2a1a; color: #00c870; }
+  .cal-popup { background: var(--surface-2); border: 1px solid var(--border-mid); border-radius: 24px 24px 0 0; padding: 12px 22px 36px; width: 100%; max-width: 600px; }
+  .cal-header { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 18px; }
+  .cal-title { font-size: 17px; font-weight: 600; color: var(--text); letter-spacing: -0.4px; }
+  .cal-cell-name { font-size: 11px; color: var(--text-2); margin-top: 3px; }
+  .cal-nav { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; }
+  .cal-nav-btn { border: none; background: var(--surface); color: var(--text-2); font-size: 18px; cursor: pointer; padding: 6px 14px; border-radius: 10px; -webkit-tap-highlight-color: transparent; transition: all 0.15s; }
+  .cal-nav-btn:hover { background: var(--surface-3); color: var(--text); }
+  .cal-month-label { font-size: 13px; color: var(--text); font-family: 'IBM Plex Mono', monospace; }
+  .cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; margin-bottom: 8px; }
+  .cal-day-label { text-align: center; font-size: 9px; color: var(--text-dim); font-family: 'IBM Plex Mono', monospace; padding: 4px 0; }
+  .cal-day { text-align: center; font-size: 13px; padding: 9px 4px; border-radius: 8px; cursor: pointer; color: var(--text-2); -webkit-tap-highlight-color: transparent; transition: all 0.12s var(--ease); }
+  .cal-day:hover { background: var(--surface-3); color: var(--text); }
+  .cal-day.today { color: var(--accent); font-weight: 600; }
+  .cal-day.selected { background: var(--surface-3); color: var(--text); outline: 1.5px solid var(--border-hi); border-radius: 8px; }
+  .cal-day.checked { background: rgba(46,200,122,0.12); color: var(--h2); }
   .cal-day.empty { cursor: default; }
-  .cal-close { border: none; background: transparent; color: #505054; font-size: 20px; cursor: pointer; }
+  .cal-close { border: none; background: var(--surface); color: var(--text-2); font-size: 18px; cursor: pointer; padding: 4px 10px; border-radius: 8px; line-height: 1.4; transition: all 0.15s; }
+  .cal-close:hover { background: var(--surface-3); }
 
-  /* ── 확인 팝업 (5. 삭제 확인) ── */
-  .confirm-overlay {
-    display: none; position: fixed; inset: 0;
-    background: rgba(0,0,0,0.75); z-index: 500;
-    align-items: center; justify-content: center; padding: 24px;
-  }
+  /* ── 확인 팝업 ── */
+  .confirm-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.7); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); z-index: 500; align-items: center; justify-content: center; padding: 24px; }
   .confirm-overlay.open { display: flex; }
-  .confirm-box {
-    background: #141415; border: 1px solid #1e1e20;
-    border-radius: 10px; padding: 24px 20px 20px;
-    width: 100%; max-width: 320px; text-align: center;
-    display: flex; flex-direction: column; gap: 16px;
-  }
-  .confirm-msg { font-size: 13px; color: #e8e8e8; line-height: 1.6; }
+  .confirm-box { background: var(--surface-2); border: 1px solid var(--border-mid); border-radius: 20px; padding: 28px 22px 22px; width: 100%; max-width: 320px; text-align: center; display: flex; flex-direction: column; gap: 18px; }
+  .confirm-msg { font-size: 14px; color: var(--text); line-height: 1.6; }
   .confirm-btns { display: flex; gap: 8px; }
-  .confirm-btn {
-    flex: 1; padding: 11px; border-radius: 4px; border: none;
-    font-family: 'IBM Plex Sans KR', sans-serif; font-size: 12px;
-    font-weight: 500; cursor: pointer;
-  }
-  .confirm-btn.danger { background: #5a1a1a; color: #e08080; }
-  .confirm-btn.danger:hover { background: #6a2020; }
-  .confirm-btn.safe { background: transparent; color: #505054; border: 1px solid #1e1e20; }
+  .confirm-btn { flex: 1; padding: 12px; border-radius: 12px; border: none; font-family: 'IBM Plex Sans KR', sans-serif; font-size: 13px; font-weight: 500; cursor: pointer; transition: all 0.15s; }
+  .confirm-btn.danger { background: rgba(180,40,40,0.2); color: #e08080; }
+  .confirm-btn.danger:hover { background: rgba(180,40,40,0.3); }
+  .confirm-btn.safe { background: transparent; color: var(--text-2); border: 1px solid var(--border-mid); }
 
   /* ── 블록 확대 팝업 ── */
-  .block-overlay {
-    display: none; position: fixed; inset: 0;
-    background: rgba(0,0,0,0.82); z-index: 300;
-    align-items: center; justify-content: center; padding: 20px;
-  }
+  .block-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.75); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); z-index: 300; align-items: center; justify-content: center; padding: 20px; }
   .block-overlay.open { display: flex; }
-  .block-popup {
-    background: #111112; border: 1px solid #1e1e20;
-    border-radius: 10px; width: 100%; max-width: 380px;
-    padding: 20px; display: flex; flex-direction: column; gap: 14px;
-  }
+  .block-popup { background: var(--surface-2); border: 1px solid var(--border-mid); border-radius: 20px; width: 100%; max-width: 380px; padding: 20px; display: flex; flex-direction: column; gap: 14px; }
   .block-popup-header { display: flex; align-items: center; justify-content: space-between; }
-  .block-popup-title { font-size: 14px; font-weight: 600; color: #e8e8e8; letter-spacing: -0.4px; }
-  .block-popup-close { border: none; background: transparent; color: #505054; font-size: 20px; cursor: pointer; padding: 0 4px; line-height: 1; }
-  .block-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
-  .block-cell {
-    border-radius: 6px; padding: 12px 6px;
-    display: flex; align-items: center; justify-content: center;
-    text-align: center; font-family: 'IBM Plex Sans KR', sans-serif;
-    font-size: 12px; font-weight: 400; line-height: 1.4;
-    cursor: pointer; min-height: 68px;
-    transition: filter 0.15s, transform 0.1s;
-    word-break: keep-all; position: relative;
-    -webkit-tap-highlight-color: transparent;
-    -webkit-touch-callout: none;
-    user-select: none;
-  }
-  .block-cell:active { transform: scale(0.95); }
+  .block-popup-title { font-size: 17px; font-weight: 600; color: var(--text); letter-spacing: -0.5px; }
+  .block-popup-close { border: none; background: var(--surface); color: var(--text-dim); font-size: 18px; cursor: pointer; padding: 4px 10px; border-radius: 8px; line-height: 1.4; transition: all 0.15s; }
+  .block-popup-close:hover { background: var(--surface-3); color: var(--text); }
+  .block-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 7px; }
+  .block-cell { border-radius: 12px; padding: 12px 8px; display: flex; align-items: center; justify-content: center; text-align: center; font-family: 'IBM Plex Sans KR', sans-serif; font-size: 12px; font-weight: 400; line-height: 1.4; cursor: pointer; min-height: 70px; transition: filter 0.15s, transform 0.12s var(--spring); word-break: keep-all; position: relative; -webkit-tap-highlight-color: transparent; -webkit-touch-callout: none; user-select: none; }
+  .block-cell:active { transform: scale(0.93); }
   .block-cell.center-cell { font-weight: 600; font-size: 13px; cursor: default; }
-  .block-cell.checked { outline: 2px solid rgba(255,255,255,0.9); outline-offset: -2px; }
-  .block-cell.locked { opacity: 0.4; cursor: not-allowed; }
-  .block-popup-hint { font-size: 10px; color: #505054; text-align: center; font-family: 'IBM Plex Mono', monospace; }
+  .block-cell.checked { outline: 2px solid rgba(255,255,255,0.75); outline-offset: -2px; }
+  .block-cell.locked { opacity: 0.35; cursor: not-allowed; }
+  .block-popup-hint { font-size: 10px; color: var(--text-dim); text-align: center; font-family: 'IBM Plex Mono', monospace; }
   .block-nav { display: flex; align-items: center; justify-content: space-between; }
-  .block-nav-btn {
-    border: none; background: transparent; color: #505054;
-    font-size: 20px; cursor: pointer; padding: 4px 8px; line-height: 1;
-    -webkit-tap-highlight-color: transparent; transition: color 0.15s;
-  }
-  .block-nav-btn:hover { color: #e8e8e8; }
-  .block-nav-btn:disabled { opacity: 0.15; cursor: default; }
-  .block-cell .log-dot {
-    position: absolute; top: 5px; right: 6px;
-    width: 4px; height: 4px; border-radius: 50%;
-    background: rgba(255,255,255,0.3);
-  }
+  .block-nav-btn { border: none; background: var(--surface); color: var(--text-2); font-size: 20px; cursor: pointer; padding: 6px 14px; border-radius: 10px; -webkit-tap-highlight-color: transparent; transition: all 0.15s; }
+  .block-nav-btn:hover { background: var(--surface-3); color: var(--text); }
+  .block-nav-btn:disabled { opacity: 0.2; cursor: default; }
+  .block-cell .log-dot { position: absolute; top: 6px; right: 7px; width: 4px; height: 4px; border-radius: 50%; background: rgba(255,255,255,0.25); }
 
   /* ── AI 코멘트 패널 ── */
-  .comment-panel {
-    display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 110px;
-    background: #080809; z-index: 150; overflow-y: auto;
-    padding: 24px 16px 20px;
-  }
+  .comment-panel { display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 110px; background: var(--bg); z-index: 150; overflow-y: auto; padding: 24px 18px 20px; }
   .comment-panel.open { display: block; }
-  .comment-inner { width: 100%; max-width: 480px; margin: 0 auto; display: flex; flex-direction: column; gap: 20px; }
-  .comment-date-label { font-family: 'IBM Plex Mono', monospace; font-size: 9px; color: #505054; letter-spacing: 2px; text-align: center; }
-  .comment-box {
-    background: #0f0f10; border: 1px solid #1e1e20;
-    border-radius: 8px; padding: 22px 20px;
-    font-size: 14px; font-weight: 400; line-height: 1.8;
-    color: #e8e8e8; min-height: 80px;
-    white-space: pre-wrap; letter-spacing: -0.2px;
-  }
-  .comment-box.loading { color: #505054; font-size: 12px; font-family: 'IBM Plex Mono', monospace; }
+  .comment-inner { width: 100%; max-width: 480px; margin: 0 auto; display: flex; flex-direction: column; gap: 16px; }
+  .comment-date-label { font-family: 'IBM Plex Mono', monospace; font-size: 9px; color: var(--text-dim); letter-spacing: 3px; text-align: center; }
+  .comment-box { background: var(--surface-2); border: 1px solid var(--border); border-radius: 16px; padding: 22px 20px; font-size: 15px; font-weight: 400; line-height: 1.85; color: var(--text); min-height: 80px; white-space: pre-wrap; letter-spacing: -0.2px; }
+  .comment-box.loading { color: var(--text-dim); font-size: 12px; font-family: 'IBM Plex Mono', monospace; }
   .comment-checked-list { display: flex; flex-wrap: wrap; gap: 6px; }
-  .comment-chip {
-    padding: 4px 10px; border-radius: 20px;
-    background: #0f0f10; border: 1px solid #1e1e20;
-    font-size: 10px; color: #505054;
-  }
-  .comment-chip.done { border-color: #333; color: #888; }
-  .comment-section-label { font-size: 10px; color: #505054; margin-bottom: 6px; font-family: 'IBM Plex Mono', monospace; letter-spacing: 1px; }
-  .comment-generate-btn {
-    width: 100%; padding: 14px; border-radius: 6px;
-    border: 1px solid #333; background: #181818;
-    color: #e8e8e8; font-family: 'IBM Plex Sans KR', sans-serif;
-    font-size: 12px; font-weight: 500; cursor: pointer;
-    transition: background 0.15s; -webkit-tap-highlight-color: transparent;
-  }
-  .comment-generate-btn:hover { background: #222; }
+  .comment-chip { padding: 5px 12px; border-radius: 20px; background: var(--surface-2); border: 1px solid var(--border); font-size: 11px; color: var(--text-dim); }
+  .comment-chip.done { border-color: var(--border-mid); color: var(--text-2); }
+  .comment-section-label { font-size: 10px; color: var(--text-dim); margin-bottom: 8px; font-family: 'IBM Plex Mono', monospace; letter-spacing: 1.5px; text-transform: uppercase; }
+  .comment-generate-btn { width: 100%; padding: 15px; border-radius: 14px; border: 1px solid var(--border-mid); background: var(--surface-2); color: var(--text); font-family: 'IBM Plex Sans KR', sans-serif; font-size: 13px; font-weight: 500; cursor: pointer; transition: all 0.2s var(--ease); -webkit-tap-highlight-color: transparent; }
+  .comment-generate-btn:hover { background: var(--surface-3); border-color: var(--border-hi); }
   .comment-generate-btn:disabled { opacity: 0.4; cursor: not-allowed; }
 
   /* ── 약점 항목 ── */
-  .weak-item {
-    display: flex; align-items: center; gap: 10px;
-    background: #0f0f10; border: 1px solid #1e1e20;
-    border-radius: 6px; padding: 9px 12px;
-  }
-  .weak-bar-wrap { flex: 1; height: 3px; background: #1e1e20; border-radius: 2px; overflow: hidden; }
-  .weak-bar { height: 100%; border-radius: 2px; background: #c04040; transition: width 0.4s ease; }
-  .weak-label { font-size: 11px; color: #e8e8e8; flex: 0 0 auto; max-width: 140px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .weak-pct { font-family: 'IBM Plex Mono', monospace; font-size: 9px; color: #c04040; flex-shrink: 0; width: 28px; text-align: right; }
+  .weak-item { display: flex; align-items: center; gap: 10px; background: var(--surface-2); border: 1px solid var(--border); border-radius: 10px; padding: 10px 14px; }
+  .weak-bar-wrap { flex: 1; height: 3px; background: var(--surface-3); border-radius: 2px; overflow: hidden; }
+  .weak-bar { height: 100%; border-radius: 2px; background: #c04040; transition: width 0.5s var(--ease); }
+  .weak-label { font-size: 12px; color: var(--text); flex: 0 0 auto; max-width: 140px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .weak-pct { font-family: 'IBM Plex Mono', monospace; font-size: 9px; flex-shrink: 0; width: 28px; text-align: right; }
 
   /* ── 스트릭 + 통계 ── */
-  .stats-row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
-  .stat-card {
-    background: #0f0f10; border: 1px solid #1e1e20;
-    border-radius: 8px; padding: 14px 16px;
-    display: flex; flex-direction: column; gap: 4px;
-  }
-  .stat-card-label { font-family: 'IBM Plex Mono', monospace; font-size: 9px; color: #505054; letter-spacing: 1px; }
-  .stat-card-value { font-size: 26px; font-weight: 300; letter-spacing: -1px; color: #e8e8e8; line-height: 1; }
-  .stat-card-value span { font-size: 12px; color: #505054; font-weight: 400; }
+  .stats-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .stat-card { background: var(--surface-2); border: 1px solid var(--border); border-radius: 16px; padding: 16px 18px; display: flex; flex-direction: column; gap: 6px; }
+  .stat-card-label { font-family: 'IBM Plex Mono', monospace; font-size: 9px; color: var(--text-dim); letter-spacing: 1.5px; text-transform: uppercase; }
+  .stat-card-value { font-size: 28px; font-weight: 300; letter-spacing: -1.5px; color: var(--text); line-height: 1; }
+  .stat-card-value span { font-size: 12px; color: var(--text-dim); font-weight: 400; }
   .stat-card.streak .stat-card-value { color: #e07830; }
   .streak-bar { display: flex; gap: 3px; flex-wrap: wrap; margin-top: 2px; }
-  .streak-day { width: 8px; height: 8px; border-radius: 2px; background: #1e1e20; }
+  .streak-day { width: 8px; height: 8px; border-radius: 3px; background: var(--surface-3); }
   .streak-day.on { background: #e07830; }
-  .streak-day.today { outline: 1px solid #e07830; outline-offset: 1px; }
-  .area-stats { display: flex; flex-direction: column; gap: 6px; }
+  .streak-day.today { outline: 1.5px solid #e07830; outline-offset: 1.5px; }
+  .area-stats { display: flex; flex-direction: column; gap: 7px; }
   .area-stat-row { display: flex; align-items: center; gap: 8px; }
-  .area-stat-name { font-size: 10px; color: #505054; width: 72px; flex-shrink: 0; }
-  .area-stat-bar-wrap { flex: 1; height: 4px; background: #1e1e20; border-radius: 2px; overflow: hidden; }
-  .area-stat-bar { height: 100%; border-radius: 2px; transition: width 0.4s ease; }
-  .area-stat-pct { font-family: 'IBM Plex Mono', monospace; font-size: 9px; color: #505054; width: 28px; text-align: right; }
+  .area-stat-name { font-size: 11px; color: var(--text-2); width: 72px; flex-shrink: 0; }
+  .area-stat-bar-wrap { flex: 1; height: 4px; background: var(--surface-3); border-radius: 2px; overflow: hidden; }
+  .area-stat-bar { height: 100%; border-radius: 2px; transition: width 0.5s var(--ease); }
+  .area-stat-pct { font-family: 'IBM Plex Mono', monospace; font-size: 9px; color: var(--text-dim); width: 28px; text-align: right; }
 
   /* ── 기간 탭 ── */
-  .period-tabs { display: flex; gap: 0; background: #0f0f10; border: 1px solid #1e1e20; border-radius: 6px; padding: 3px; }
-  .period-tab {
-    flex: 1; padding: 7px 0; border: none; background: transparent;
-    color: #505054; font-family: 'IBM Plex Sans KR', sans-serif;
-    font-size: 11px; cursor: pointer; border-radius: 4px;
-    transition: all 0.15s; -webkit-tap-highlight-color: transparent;
-  }
-  .period-tab.active { background: #2a2a2a; color: #e8e8e8; }
+  .period-tabs { display: flex; background: var(--surface-2); border: 1px solid var(--border); border-radius: 10px; padding: 3px; }
+  .period-tab { flex: 1; padding: 8px 0; border: none; background: transparent; color: var(--text-dim); font-family: 'IBM Plex Sans KR', sans-serif; font-size: 12px; cursor: pointer; border-radius: 7px; transition: all 0.18s var(--ease); -webkit-tap-highlight-color: transparent; }
+  .period-tab.active { background: var(--surface-3); color: var(--text); }
   .period-content { display: none; }
   .period-content.active { display: flex; flex-direction: column; gap: 12px; }
 
   /* ── 설정 패널 ── */
-  .settings-panel {
-    display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 110px;
-    background: #080809; z-index: 150; overflow-y: auto;
-    padding: 24px 16px 20px;
-  }
+  .settings-panel { display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 110px; background: var(--bg); z-index: 150; overflow-y: auto; padding: 24px 18px 20px; }
   .settings-panel.open { display: block; }
-  .settings-title { font-size: 13px; font-weight: 600; color: #e8e8e8; margin-bottom: 20px; }
-  .settings-area-block { margin-bottom: 24px; }
-  .settings-area-title { font-size: 11px; font-weight: 600; margin-bottom: 10px; padding-bottom: 6px; border-bottom: 1px solid #1e1e20; }
-  .settings-item { display: flex; align-items: center; gap: 8px; padding: 8px 0; border-bottom: 1px solid #161618; }
-  .log-toggle {
-    flex-shrink: 0; width: 32px; height: 18px;
-    background: #1e1e20; border-radius: 9px;
-    position: relative; cursor: pointer; border: none;
-    transition: background 0.2s; -webkit-tap-highlight-color: transparent;
-  }
-  .log-toggle.on { background: #3a7a4a; }
-  .log-toggle::after {
-    content: ''; position: absolute; top: 2px; left: 2px;
-    width: 14px; height: 14px; border-radius: 50%;
-    background: #fff; transition: transform 0.2s;
-  }
-  .log-toggle.on::after { transform: translateX(14px); }
-  .settings-item-input {
-    flex: 1; background: transparent; border: none; outline: none;
-    color: #e8e8e8; font-family: 'IBM Plex Sans KR', sans-serif;
-    font-size: 12px; padding: 4px 8px; border-radius: 4px;
-    transition: background 0.15s;
-    -webkit-user-select: text; user-select: text;
-  }
-  .settings-item-input:focus { background: #0f0f10; }
-  .settings-cycle-select {
-    background: #0f0f10; border: 1px solid #1e1e20;
-    border-radius: 4px; color: #505054;
-    font-family: 'IBM Plex Sans KR', sans-serif; font-size: 10px;
-    padding: 4px 6px; outline: none; cursor: pointer; flex-shrink: 0;
-  }
-  .settings-save-btn {
-    position: sticky; bottom: 0; width: 100%;
-    padding: 14px; border-radius: 6px; border: none;
-    background: #2a2a2a; color: #e8e8e8;
-    font-family: 'IBM Plex Sans KR', sans-serif; font-size: 12px;
-    font-weight: 500; cursor: pointer; margin-top: 8px;
-    -webkit-tap-highlight-color: transparent;
-  }
-  .settings-save-btn:hover { background: #333; }
-  .settings-saved-toast {
-    position: fixed; bottom: 130px; left: 50%; transform: translateX(-50%);
-    background: #2a2a2a; color: #e8e8e8; border-radius: 20px;
-    padding: 8px 18px; font-size: 11px; z-index: 500;
-    opacity: 0; transition: opacity 0.3s; pointer-events: none;
-  }
+  .settings-title { font-size: 20px; font-weight: 600; color: var(--text); margin-bottom: 20px; letter-spacing: -0.6px; }
+  .settings-area-block { margin-bottom: 28px; }
+  .settings-area-title { font-size: 11px; font-weight: 600; margin-bottom: 10px; padding-bottom: 8px; border-bottom: 1px solid var(--border); letter-spacing: 0.2px; }
+  .settings-item { display: flex; align-items: center; gap: 8px; padding: 9px 0; border-bottom: 1px solid rgba(255,255,255,0.03); }
+  .log-toggle { flex-shrink: 0; width: 34px; height: 20px; background: var(--surface-3); border-radius: 10px; position: relative; cursor: pointer; border: none; transition: background 0.2s var(--ease); -webkit-tap-highlight-color: transparent; }
+  .log-toggle.on { background: #2d6e3e; }
+  .log-toggle::after { content: ''; position: absolute; top: 3px; left: 3px; width: 14px; height: 14px; border-radius: 50%; background: rgba(255,255,255,0.8); transition: transform 0.2s var(--spring); }
+  .log-toggle.on::after { transform: translateX(14px); background: #fff; }
+  .settings-item-input { flex: 1; background: transparent; border: none; outline: none; color: var(--text); font-family: 'IBM Plex Sans KR', sans-serif; font-size: 13px; padding: 4px 8px; border-radius: 6px; transition: background 0.15s; -webkit-user-select: text; user-select: text; }
+  .settings-item-input:focus { background: var(--surface-2); }
+  .settings-cycle-select { background: var(--surface-2); border: 1px solid var(--border); border-radius: 8px; color: var(--text-2); font-family: 'IBM Plex Sans KR', sans-serif; font-size: 11px; padding: 5px 8px; outline: none; cursor: pointer; flex-shrink: 0; }
+  .settings-save-btn { position: sticky; bottom: 0; width: 100%; padding: 15px; border-radius: 14px; border: none; background: var(--surface-3); color: var(--text); font-family: 'IBM Plex Sans KR', sans-serif; font-size: 13px; font-weight: 500; cursor: pointer; margin-top: 8px; -webkit-tap-highlight-color: transparent; transition: all 0.15s; }
+  .settings-save-btn:hover { background: #222230; }
+  .settings-saved-toast { position: fixed; bottom: 130px; left: 50%; transform: translateX(-50%); background: var(--surface-3); color: var(--text); border: 1px solid var(--border-mid); border-radius: 24px; padding: 9px 20px; font-size: 12px; z-index: 500; opacity: 0; transition: opacity 0.25s; pointer-events: none; }
   .settings-saved-toast.show { opacity: 1; }
 
   /* ── API 키 입력 모달 ── */
-  .apikey-overlay {
-    display: none; position: fixed; inset: 0;
-    background: rgba(0,0,0,0.85); z-index: 400;
-    align-items: center; justify-content: center; padding: 24px;
-  }
+  .apikey-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.75); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); z-index: 400; align-items: center; justify-content: center; padding: 24px; }
   .apikey-overlay.open { display: flex; }
-  .apikey-modal {
-    background: #141415; border: 1px solid #1e1e20;
-    border-radius: 12px; padding: 24px 20px 28px;
-    width: 100%; max-width: 400px; display: flex; flex-direction: column; gap: 14px;
-  }
-  .apikey-title { font-size: 13px; font-weight: 600; color: #e8e8e8; }
-  .apikey-desc { font-size: 11px; color: #505054; line-height: 1.7; }
+  .apikey-modal { background: var(--surface-2); border: 1px solid var(--border-mid); border-radius: 20px; padding: 26px 22px 28px; width: 100%; max-width: 400px; display: flex; flex-direction: column; gap: 14px; }
+  .apikey-title { font-size: 17px; font-weight: 600; color: var(--text); letter-spacing: -0.4px; }
+  .apikey-desc { font-size: 12px; color: var(--text-2); line-height: 1.75; }
   .apikey-desc a { color: #6090d0; text-decoration: none; }
-  .apikey-input {
-    width: 100%; background: #0f0f10; border: 1px solid #1e1e20;
-    border-radius: 4px; color: #e8e8e8; font-family: 'IBM Plex Mono', monospace;
-    font-size: 11px; padding: 10px 12px; outline: none;
-    -webkit-user-select: text; user-select: text;
-  }
-  .apikey-input:focus { border-color: #444; }
+  .apikey-input { width: 100%; background: var(--surface); border: 1px solid var(--border-mid); border-radius: 10px; color: var(--text); font-family: 'IBM Plex Mono', monospace; font-size: 11px; padding: 12px 14px; outline: none; -webkit-user-select: text; user-select: text; transition: border-color 0.15s; }
+  .apikey-input:focus { border-color: var(--border-hi); }
   .apikey-btns { display: flex; gap: 8px; }
-  .apikey-save {
-    flex: 1; padding: 12px; border-radius: 4px; border: none;
-    background: #2a2a2a; color: #e8e8e8;
-    font-family: 'IBM Plex Sans KR', sans-serif; font-size: 12px;
-    font-weight: 500; cursor: pointer;
-  }
-  .apikey-save:hover { background: #333; }
-  .apikey-cancel {
-    padding: 12px 16px; border-radius: 4px;
-    border: 1px solid #1e1e20; background: transparent;
-    color: #505054; font-family: 'IBM Plex Sans KR', sans-serif;
-    font-size: 12px; cursor: pointer;
-  }
-  .apikey-reset { font-size: 10px; color: #555; cursor: pointer; text-decoration: underline; background: none; border: none; }
-  .apikey-reset:hover { color: #888; }
+  .apikey-save { flex: 1; padding: 13px; border-radius: 12px; border: none; background: var(--surface-3); color: var(--text); font-family: 'IBM Plex Sans KR', sans-serif; font-size: 13px; font-weight: 500; cursor: pointer; transition: all 0.15s; }
+  .apikey-save:hover { background: #222230; }
+  .apikey-cancel { padding: 13px 16px; border-radius: 12px; border: 1px solid var(--border-mid); background: transparent; color: var(--text-2); font-family: 'IBM Plex Sans KR', sans-serif; font-size: 13px; cursor: pointer; }
+  .apikey-reset { font-size: 11px; color: var(--text-dim); cursor: pointer; text-decoration: underline; background: none; border: none; transition: color 0.15s; }
+  .apikey-reset:hover { color: var(--text-2); }
 </style>
+
 </head>
 <body>
 
@@ -577,9 +387,9 @@
         <div style="font-size:10px;color:#505054;margin-top:4px" id="statTodayDetail"></div>
       </div>
     </div>
-    <!-- 최근 약점 -->
+    <!-- 이번 주 약점 -->
     <div id="weakSection">
-      <div class="comment-section-label">최근 약점 <span id="weakPeriodLabel" style="color:#505054;font-size:9px"></span></div>
+      <div class="comment-section-label">이번 주 약점 <span id="weakPeriodLabel" style="color:#505054;font-size:9px"></span></div>
       <div id="weakList" style="display:flex;flex-direction:column;gap:6px;"></div>
     </div>
 
@@ -632,6 +442,7 @@
 <!-- 달력 팝업 -->
 <div class="cal-overlay" id="calOverlay">
   <div class="cal-popup">
+    <div style="width:36px;height:4px;background:rgba(255,255,255,0.1);border-radius:2px;margin:0 auto 16px;"></div>
     <div class="cal-header">
       <div>
         <div class="cal-title">날짜 선택</div>
@@ -651,11 +462,12 @@
 <!-- 기록 입력 모달 -->
 <div class="modal-overlay" id="modalOverlay">
   <div class="modal">
+    <div style="width:36px;height:4px;background:rgba(255,255,255,0.1);border-radius:2px;margin:0 auto 18px;"></div>
     <div class="modal-title" id="modalTitle">기록 남기기</div>
     <div class="modal-cell-name" id="modalCellName"></div>
     <label>날짜</label>
     <input type="date" id="modalDate">
-    <label>메모 (선택)</label>
+    <label>메모 <span style="color:#303034">(선택)</span></label>
     <textarea id="modalComment" placeholder="예) 완독. 생각보다 어렵지 않았다."></textarea>
     <div class="modal-btns">
       <button class="modal-btn cancel" id="modalCancel">취소</button>
@@ -685,14 +497,14 @@ const areas = [
 ];
 
 const areaColorMap = {
-  a1: { bg: '#12101c', hbg: '#1a1628', hcol: '#9080bc', tcol: '#a090cc' },
-  a2: { bg: '#001a10', hbg: '#002a18', hcol: '#00c870', tcol: '#6abea0' },
-  a3: { bg: '#1a0e00', hbg: '#281400', hcol: '#e07830', tcol: '#bea878' },
-  a4: { bg: '#001418', hbg: '#001e26', hcol: '#00b4d0', tcol: '#6abe78' },
-  a5: { bg: '#1a0010', hbg: '#280018', hcol: '#e0306a', tcol: '#b080cc' },
-  a6: { bg: '#141200', hbg: '#201e00', hcol: '#c8b800', tcol: '#bcb860' },
-  a7: { bg: '#001418', hbg: '#001a28', hcol: '#3090e0', tcol: '#60a8be' },
-  a8: { bg: '#0e1800', hbg: '#142200', hcol: '#70c020', tcol: '#be7868' },
+  a1: { bg: '#0f0e18', hbg: '#1c1930', hcol: '#a090cc', tcol: '#a090cc' },
+  a2: { bg: '#061812', hbg: '#0c2a1e', hcol: '#2ec87a', tcol: '#5aae88' },
+  a3: { bg: '#1c0e00', hbg: '#2c1800', hcol: '#e08840', tcol: '#c0a060' },
+  a4: { bg: '#041418', hbg: '#082030', hcol: '#18b8d4', tcol: '#58a8b8' },
+  a5: { bg: '#1c0012', hbg: '#2c0820', hcol: '#e04878', tcol: '#a06090' },
+  a6: { bg: '#141000', hbg: '#201c00', hcol: '#c8b830', tcol: '#a8a840' },
+  a7: { bg: '#041418', hbg: '#082030', hcol: '#4898e4', tcol: '#5890b8' },
+  a8: { bg: '#0c1800', hbg: '#162400', hcol: '#7cc430', tcol: '#88a840' },
 };
 
 const grid = Array.from({length: 9}, () => Array(9).fill(null));
@@ -841,6 +653,7 @@ document.getElementById('modalConfirm').addEventListener('click', () => {
   if (modalCallback) modalCallback(modalDate.value, modalComment.value.trim());
   closeModal();
 });
+// ── 메모 없이 체크 버튼 ──
 document.getElementById('modalSkip').addEventListener('click', () => {
   if (modalCallback) modalCallback(modalDate.value, '');
   closeModal();
@@ -852,6 +665,7 @@ function openModal(cellText, areaId, onSave, prefillDate, prefillComment, isEdit
   modalCellName.textContent = cellText.replace(/\n/g, ' ');
   modalDate.value = prefillDate || getToday();
   modalComment.value = prefillComment || '';
+  // 수정 모드일 땐 건너뛰기 숨김 (이미 저장된 항목이므로)
   document.getElementById('modalSkip').style.display = isEdit ? 'none' : '';
   modalCallback = (date, comment) => onSave(date, comment);
   modalOverlay.classList.add('open');
@@ -879,7 +693,6 @@ function openCalendar(cellText, areaId, key, onDateSelected) {
   calCallback = onDateSelected;
   document.getElementById('calCellName').textContent = cellText.replace(/\n/g, ' ');
 
-  // 이미 기록된 날짜 수집
   calCheckedDates = new Set(
     logData.filter(l => l.key === key).map(l => l.date)
   );
@@ -905,7 +718,6 @@ function renderCal() {
   const lastDate = new Date(calYear, calMonth + 1, 0).getDate();
   const todayStr = getToday();
 
-  // 빈 칸
   for (let i = 0; i < firstDay; i++) {
     const el = document.createElement('div');
     el.className = 'cal-day empty';
@@ -922,7 +734,6 @@ function renderCal() {
 
     el.addEventListener('click', () => {
       calOverlay.classList.remove('open');
-      // 날짜 선택 후 메모 입력 모달
       openModal(calCellText, calAreaId, (date, comment) => {
         calCallback(dateStr, comment);
       }, dateStr, '', false);
@@ -959,7 +770,6 @@ function renderLogs() {
   }).join('');
 }
 
-// 4. 메모 수정
 function editLog(idx) {
   const log = logData[idx];
   if (!log) return;
@@ -971,7 +781,6 @@ function editLog(idx) {
   }, log.date, log.comment, true);
 }
 
-// 5. 삭제 확인
 function confirmDeleteLog(idx) {
   showConfirm('이 기록을 삭제할까요?', () => {
     logData.splice(idx, 1);
@@ -1039,9 +848,7 @@ for (let r = 0; r < 9; r++) {
         const d = clickData[key];
         if (!d || d.count === 0) return;
         clickData[key].count--;
-        // count가 0이 되면 오늘 클릭 취소 → lastDate도 제거
         if (!clickData[key].count) delete clickData[key];
-        // count > 0이면 lastDate 유지 (이전 기록 보존)
         saveClicks(); applyBrightness(div, key); applyBorder(div, key, cycleDays);
       };
 
@@ -1052,14 +859,12 @@ for (let r = 0; r < 9; r++) {
       div.addEventListener('click', (e) => {
         const now = Date.now();
         if (now - lastTap < 300) {
-          // 더블탭 → 취소
           clearTimeout(tapTimer);
           undoClick(); lastTap = 0; return;
         }
         lastTap = now;
 
         if (loggable) {
-          // 싱글탭 확정 후 달력 열기 (더블탭이면 위에서 취소됨)
           tapTimer = setTimeout(() => {
             openCalendar(cell.text, areaId, key, (date, comment) => {
               if (isClickable(key, cycleDays)) {
@@ -1084,7 +889,6 @@ for (let r = 0; r < 9; r++) {
         setTimeout(()=>{ div.style.transform=''; }, 150);
       });
 
-      // 우클릭 (데스크탑) - loggable이면 달력 팝업
       div.addEventListener('contextmenu', (e) => {
         e.preventDefault();
         if (loggable) {
@@ -1141,7 +945,7 @@ areas.forEach((area, i) => {
   i < 6 ? tabRow1.appendChild(btn) : tabRow2.appendChild(btn);
 });
 
-tabRow2.appendChild(document.createElement('div')); // 빈칸
+tabRow2.appendChild(document.createElement('div'));
 
 const commentPanel = document.getElementById('commentPanel');
 let commentPanelOpen = false;
@@ -1219,7 +1023,7 @@ function renderSettingsPanel() {
       const input = document.createElement('input');
       input.className = 'settings-item-input';
       input.type = 'text';
-      input.value = item.replace(/\n/g, '/'); // \n → /로 표시
+      input.value = item.replace(/\n/g, '/');
       input.placeholder = '/ 로 줄바꿈';
       input.dataset.areaIdx = areaIdx;
       input.dataset.itemIdx = itemIdx;
@@ -1255,40 +1059,26 @@ function renderSettingsPanel() {
   });
 }
 
-// 자동 줄바꿈: 한 줄 최소 2자, 최대 7자 기준
 function autoWrap(text) {
   const clean = text.replace(/\\n/g, ' ').replace(/\n/g, ' ').trim();
   if (clean.length <= 7) return clean;
-
   const words = clean.split(' ').filter(w => w.length > 0);
-
   if (words.length >= 2) {
-    // 단어 조합 중 가장 균형잡힌 분할점 찾기
-    let bestSplit = 1;
-    let bestDiff = Infinity;
+    let bestSplit = 1, bestDiff = Infinity;
     for (let i = 1; i < words.length; i++) {
-      const line1 = words.slice(0, i).join(' ');
-      const line2 = words.slice(i).join(' ');
-      // 두 줄 다 2자 이상이어야 함
+      const line1 = words.slice(0, i).join(' '), line2 = words.slice(i).join(' ');
       if (line1.length < 2 || line2.length < 2) continue;
       const diff = Math.abs(line1.length - line2.length);
       if (diff < bestDiff) { bestDiff = diff; bestSplit = i; }
     }
-    const l1 = words.slice(0, bestSplit).join(' ');
-    const l2 = words.slice(bestSplit).join(' ');
-    // l2가 너무 길면 3줄로
+    const l1 = words.slice(0, bestSplit).join(' '), l2 = words.slice(bestSplit).join(' ');
     if (l2.length > 8 && words.length >= 3) {
-      const mid1 = Math.ceil(words.length / 3);
-      const mid2 = Math.ceil(words.length * 2 / 3);
-      const a = words.slice(0, mid1).join(' ');
-      const b = words.slice(mid1, mid2).join(' ');
-      const c = words.slice(mid2).join(' ');
+      const mid1 = Math.ceil(words.length / 3), mid2 = Math.ceil(words.length * 2 / 3);
+      const a = words.slice(0, mid1).join(' '), b = words.slice(mid1, mid2).join(' '), c = words.slice(mid2).join(' ');
       if (a.length >= 2 && b.length >= 2 && c.length >= 2) return `${a}\n${b}\n${c}`;
     }
     return `${l1}\n${l2}`;
   }
-
-  // 단어 없이 긴 문자열: 균등 2분할 (각 줄 2자 이상)
   const half = Math.round(clean.length / 2);
   return clean.slice(0, half) + '\n' + clean.slice(half);
 }
@@ -1298,7 +1088,6 @@ document.getElementById('settingsSaveBtn').addEventListener('click', () => {
     const aIdx = parseInt(input.dataset.areaIdx), iIdx = parseInt(input.dataset.itemIdx);
     const newText = input.value.trim();
     if (newText) {
-      // /가 있으면 그걸 줄바꿈으로, 없으면 autoWrap으로 자동 처리
       if (newText.includes('/')) {
         areas[aIdx].items[iIdx] = newText.replace(/\//g, '\n');
       } else {
@@ -1328,30 +1117,22 @@ document.getElementById('settingsSaveBtn').addEventListener('click', () => {
 function rebuildGrid() {
   const sur = [0,1,2,3,5,6,7,8];
   const pos = [[0,0],[0,1],[0,2],[1,0],[1,1],[1,2],[2,0],[2,1],[2,2]];
-
   areas.forEach((area, areaIdx) => {
     const [sr, sc] = blockPositions[areaIdx];
     pos.forEach(([dr,dc], idx) => {
       if (idx !== 4) {
         const itemIdx = sur.indexOf(idx);
         const r = sr+dr, c = sc+dc;
-        // areaIdx, itemIdx 포함해서 저장
         grid[r][c] = { text: area.items[itemIdx], cls: area.id, areaIdx, itemIdx };
-        // DOM 직접 업데이트
         const div = cellEls[r][c];
         if (!div) return;
-        // 기존 텍스트 노드 제거 후 새로 설정 (dot 등 다른 자식은 유지)
         const textNodes = [...div.childNodes].filter(n => n.nodeType === 3);
         if (textNodes.length > 0) {
           textNodes.forEach(n => n.textContent = area.items[itemIdx].replace(/\n/g, '\n'));
         } else {
-          // span으로 된 경우
           const spans = div.querySelectorAll('span');
-          if (spans.length > 0) {
-            spans[0].textContent = area.items[itemIdx].replace(/\n/g, ' ');
-          } else {
-            div.textContent = area.items[itemIdx].replace(/\n/g, '\n');
-          }
+          if (spans.length > 0) spans[0].textContent = area.items[itemIdx].replace(/\n/g, ' ');
+          else div.textContent = area.items[itemIdx].replace(/\n/g, '\n');
         }
       }
     });
@@ -1394,9 +1175,7 @@ function getDailyItems() {
   return items;
 }
 function isStreakDay(dateStr) {
-  // streakHistory에 기록이 있으면 우선 사용
   if (streakHistory[dateStr]) return true;
-  // 없으면 기존 방식으로 fallback (마이그레이션용)
   const dailyItems = getDailyItems();
   if (!dailyItems.length) return false;
   let checked = 0;
@@ -1412,18 +1191,12 @@ function calcStreak() {
   let streak = 0;
   const todayStr = getToday();
   const todayDone = isStreakDay(todayStr);
-
-  // 오늘부터 거슬러 올라가며 연속 체크 확인
   const d = new Date(todayStr + 'T00:00:00');
-  // 오늘 아직 안 했으면 어제부터, 했으면 오늘부터
   if (!todayDone) d.setDate(d.getDate() - 1);
-
   while (true) {
     const ds = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
-    if (isStreakDay(ds)) {
-      streak++;
-      d.setDate(d.getDate() - 1);
-    } else break;
+    if (isStreakDay(ds)) { streak++; d.setDate(d.getDate() - 1); }
+    else break;
     if (streak > 365) break;
   }
   return streak;
@@ -1520,35 +1293,26 @@ function renderCheckedList(elId, period) {
   if (!el.children.length) el.innerHTML = `<div style="font-size:11px;color:#505054">아직 체크한 항목이 없어요</div>`;
 }
 
-// ── 약점 분석 (최근 14일 일일 항목 체크율) ──
+// ── 약점 분석 ──
 function getWeakItems(topN = 5) {
   const today = new Date(getToday() + 'T00:00:00');
-  const past14 = [];
-  for (let i = 0; i < 14; i++) {
+  const past7 = [];
+  for (let i = 0; i < 7; i++) {
     const d = new Date(today); d.setDate(today.getDate() - i);
-    past14.push(`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`);
+    past7.push(`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`);
   }
-
   const results = [];
   for (let r = 0; r < 9; r++) {
     for (let c = 0; c < 9; c++) {
       const cell = grid[r][c];
       if (!cell || cell.cls.includes('area-header') || cell.cls.includes('center-goal') || cell.cls.includes('center-block')) continue;
-      if (!cell.text || cell.text.trim() === '') continue;
       if (getEffectiveCycleDays(cell.text, cell.areaIdx, cell.itemIdx) !== 1) continue;
       const key = getCellKey(r, c);
       const totalCount = clickData[key]?.count || 0;
-      // 최근 14일 기준 체크율
-      const pct = Math.round(Math.min(totalCount, 14) / 14 * 100);
-      results.push({
-        label: cell.text.replace(/\n/g, ' '),
-        pct,
-        checkedToday: isClickedToday(key, 1),
-        areaId: cell.cls.split(' ')[0],
-      });
+      const pct = Math.round(Math.min(totalCount, 7) / 7 * 100);
+      results.push({ label: cell.text.replace(/\n/g, ' '), pct, checkedToday: isClickedToday(key, 1), areaId: cell.cls.split(' ')[0] });
     }
   }
-  // 체크율 낮은 순, 오늘도 안 한 것 우선
   results.sort((a, b) => {
     if (a.checkedToday !== b.checkedToday) return a.checkedToday ? 1 : -1;
     return a.pct - b.pct;
@@ -1574,7 +1338,6 @@ function renderCommentPanel() {
   document.getElementById('statToday').innerHTML = `${pct} <span>%</span>`;
   document.getElementById('statTodayDetail').textContent = `${checked} / ${total} 완료`;
 
-  // ── A. 약점 렌더 ──
   const weakList = document.getElementById('weakList');
   weakList.innerHTML = '';
   const weakItems = getWeakItems(5);
@@ -1582,12 +1345,11 @@ function renderCommentPanel() {
     weakList.innerHTML = `<div style="font-size:11px;color:#505054">아직 데이터가 부족해요</div>`;
   } else {
     weakItems.forEach(({ label, pct, checkedToday }) => {
-      const color = areaColorMap[areas.find(a => label.includes(a.title.replace(/\n/g,' ').split(' ')[0]))?.id]?.hcol || '#c04040';
       weakList.innerHTML += `
         <div class="weak-item">
           <div class="weak-label" title="${label}">${checkedToday ? '✓ ' : ''}${label}</div>
-          <div class="weak-bar-wrap"><div class="weak-bar" style="width:${pct}%;background:${checkedToday?'#3a7a4a':'#c04040'}"></div></div>
-          <div class="weak-pct" style="color:${checkedToday?'#3a7a4a':'#c04040'}">${pct}%</div>
+          <div class="weak-bar-wrap"><div class="weak-bar" style="width:${pct}%;background:${checkedToday?'#2d6e3e':'#b03030'}"></div></div>
+          <div class="weak-pct" style="color:${checkedToday?'#2ec87a':'#e06060'}">${pct}%</div>
         </div>`;
     });
   }
@@ -1651,19 +1413,15 @@ async function generateComment() {
     if (isClickedToday(key, cycleDays)) checkedItems.push(label); else uncheckedItems.push(label);
   }
 
-  // C. 약점 데이터 프롬프트에 포함
   const weakItems = getWeakItems(5);
-  const weakSummary = weakItems
-    .filter(w => !w.checkedToday)
-    .map(w => `${w.label}(${w.pct}%)`)
-    .join(', ');
+  const weakSummary = weakItems.filter(w => !w.checkedToday).map(w => `${w.label}(${w.pct}%)`).join(', ');
 
   try {
     const prompt = `너는 손웅정 감독처럼 직설적이고 따뜻한 멘토야. 아래는 내가 오늘 이상향을 향해 체크한 만다르트 항목이야.
 
 오늘 한 것 (${checkedItems.length}개): ${checkedItems.length ? checkedItems.join(', ') : '없음'}
 오늘 못 한 것 중 일부: ${uncheckedItems.slice(0,5).join(', ')}
-최근 2주 지속적으로 못 하고 있는 약점 항목: ${weakSummary || '없음'}
+이번 주 지속적으로 못 하고 있는 약점 항목: ${weakSummary || '없음'}
 
 위를 바탕으로 딱 2~3문장으로 코멘트를 남겨줘.
 - 잘 한 것은 인정하되 과하게 칭찬하지 말 것
@@ -1700,28 +1458,18 @@ blockOverlay.addEventListener('click', (e) => { if (e.target === blockOverlay) b
 blockPrevBtn.addEventListener('click', () => openBlockPopup((currentBlockIdx - 1 + areas.length) % areas.length));
 blockNextBtn.addEventListener('click', () => openBlockPopup((currentBlockIdx + 1) % areas.length));
 
-// 스와이프 제스처
 const blockPopupEl = document.querySelector('.block-popup');
 let swipeStartX = 0, swipeStartY = 0, swipeLocked = false;
-blockPopupEl.addEventListener('touchstart', (e) => {
-  swipeStartX = e.touches[0].clientX;
-  swipeStartY = e.touches[0].clientY;
-  swipeLocked = false;
-}, { passive: true });
+blockPopupEl.addEventListener('touchstart', (e) => { swipeStartX = e.touches[0].clientX; swipeStartY = e.touches[0].clientY; swipeLocked = false; }, { passive: true });
 blockPopupEl.addEventListener('touchmove', (e) => {
-  const dx = e.touches[0].clientX - swipeStartX;
-  const dy = e.touches[0].clientY - swipeStartY;
-  if (!swipeLocked && Math.abs(dx) > Math.abs(dy) && Math.abs(dx) > 10) {
-    swipeLocked = true;
-    e.preventDefault(); // 배경 스크롤 방지
-  }
+  const dx = e.touches[0].clientX - swipeStartX, dy = e.touches[0].clientY - swipeStartY;
+  if (!swipeLocked && Math.abs(dx) > Math.abs(dy) && Math.abs(dx) > 10) { swipeLocked = true; e.preventDefault(); }
 }, { passive: false });
 blockPopupEl.addEventListener('touchend', (e) => {
-  const dx = e.changedTouches[0].clientX - swipeStartX;
-  const dy = e.changedTouches[0].clientY - swipeStartY;
+  const dx = e.changedTouches[0].clientX - swipeStartX, dy = e.changedTouches[0].clientY - swipeStartY;
   if (Math.abs(dx) > Math.abs(dy) && Math.abs(dx) > 50) {
-    if (dx < 0) openBlockPopup((currentBlockIdx + 1) % areas.length); // 왼쪽 → 다음 (8에서 1로)
-    if (dx > 0) openBlockPopup((currentBlockIdx - 1 + areas.length) % areas.length); // 오른쪽 → 이전 (1에서 8로)
+    if (dx < 0) openBlockPopup((currentBlockIdx + 1) % areas.length);
+    if (dx > 0) openBlockPopup((currentBlockIdx - 1 + areas.length) % areas.length);
   }
 }, { passive: true });
 
@@ -1777,7 +1525,6 @@ function openBlockPopup(areaIdx) {
         }
         lastTapBlock = now;
 
-        // loggable 항목은 달력 팝업
         if (loggable) {
           openCalendar(itemText, area.id, key, (date, comment) => {
             if (isClickable(key, cycleDays)) {
@@ -1798,7 +1545,6 @@ function openBlockPopup(areaIdx) {
         cell.style.transform = 'scale(0.93)'; setTimeout(() => { cell.style.transform = ''; }, 150);
       });
 
-      // 우클릭 (데스크탑)
       cell.addEventListener('contextmenu', (e) => {
         e.preventDefault();
         if (loggable) {
@@ -1822,8 +1568,7 @@ function openBlockPopup(areaIdx) {
 function fixMobileGrid() {
   if (window.innerWidth <= 700) {
     const w = document.documentElement.clientWidth;
-    const gap = 1;
-    const totalGap = gap * 8; // 9칸 사이 gap은 8개
+    const gap = 1, totalGap = gap * 8;
     const cellSize = Math.floor((w - totalGap) / 9);
     gridEl.style.gridTemplateColumns = `repeat(9, ${cellSize}px)`;
     gridEl.style.gridTemplateRows = `repeat(9, ${cellSize}px)`;
@@ -1842,5 +1587,6 @@ function autoFitCells() {
 fixMobileGrid(); autoFitCells();
 window.addEventListener('resize', ()=>{ fixMobileGrid(); autoFitCells(); });
 </script>
+
 </body>
 </html>
