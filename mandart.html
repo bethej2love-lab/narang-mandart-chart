@@ -174,8 +174,9 @@
   .log-item-meta { display: flex; align-items: center; justify-content: space-between; }
   .log-item-date { font-family: 'IBM Plex Mono', monospace; font-size: 10px; color: #505054; }
   .log-item-comment {
-    font-size: 12px; color: #888; margin-top: 8px; line-height: 1.55;
+    font-size: 12px; color: #888; margin-top: 8px; line-height: 1.6;
     padding-top: 8px; border-top: 1px solid #1a1a1c;
+    white-space: pre-wrap;
   }
   .log-item-actions { display: flex; gap: 2px; flex-shrink: 0; }
   .log-item-edit, .log-item-delete {
@@ -622,8 +623,9 @@
       <div><div class="comment-section-label">이번 주 한 것</div><div class="comment-checked-list" id="checkedListWeek"></div></div>
     </div>
     <div class="period-content" id="periodMonth">
-      <div><div class="comment-section-label">영역별 달성률</div><div class="area-stats" id="areaStatsMonth"></div></div>
+      <div><div class="comment-section-label">영역별 달성률 (월)</div><div class="area-stats" id="areaStatsMonth"></div></div>
       <div><div class="comment-section-label">이번 달 한 것</div><div class="comment-checked-list" id="checkedListMonth"></div></div>
+      <div><div class="comment-section-label">장기 목표 현황 <span style="font-size:9px;color:#505054">(격월·분기·연)</span></div><div id="longTermList" style="display:flex;flex-direction:column;gap:6px;"></div></div>
     </div>
     <div class="comment-box loading" id="commentBox">버튼을 눌러 오늘 하루를 돌아봐요</div>
     <button class="comment-generate-btn" id="commentGenerateBtn">✦ 오늘 코멘트 받기</button>
@@ -963,13 +965,13 @@ let activeFilter = 'all';
 
 function renderLogs() {
   const list = document.getElementById('logList');
-  const filtered = activeFilter === 'all' ? [...logData] : logData.filter(l => l.areaId === activeFilter);
-  filtered.sort((a,b) => b.date.localeCompare(a.date));
+  const allFiltered = activeFilter === 'all' ? logData.map((l,i)=>({l,i})) : logData.map((l,i)=>({l,i})).filter(({l}) => l.areaId === activeFilter);
+  // 최근 추가순 (삽입 역순)
+  allFiltered.reverse();
   const countEl = document.getElementById('logCount');
-  if (countEl) countEl.textContent = filtered.length ? `${filtered.length}개의 기록` : '';
-  if (!filtered.length) { list.innerHTML = '<div class="log-empty">아직 기록이 없어요<br><span style="font-size:11px;color:#383840">체크하면 자동으로 쌓여요</span></div>'; return; }
-  list.innerHTML = filtered.map((l) => {
-    const realIdx = logData.indexOf(l);
+  if (countEl) countEl.textContent = allFiltered.length ? `${allFiltered.length}개의 기록` : '';
+  if (!allFiltered.length) { list.innerHTML = '<div class="log-empty">아직 기록이 없어요<br><span style="font-size:11px;color:#383840">체크하면 자동으로 쌓여요</span></div>'; return; }
+  list.innerHTML = allFiltered.map(({l, i: realIdx}) => {
     const areaName = areaNames[areaIds.indexOf(l.areaId)] || '';
     const accentColor = areaColorMap[l.areaId]?.hcol || '#505054';
     return `
@@ -1094,8 +1096,10 @@ for (let r = 0; r < 9; r++) {
                 saveClicks(); applyBrightness(div, key); applyBorder(div, key, cycleDays);
                 if (isStreakDay(getToday())) recordStreakToday();
               }
-              logData.push({ key, cellText: cell.text, areaId, date, comment });
-              saveLogs();
+              if (comment) {
+                logData.push({ key, cellText: cell.text, areaId, date, comment });
+                saveLogs();
+              }
               if (activeFilter !== 'all' && activeFilter !== areaId) activeFilter = 'all';
               renderLogs();
             });
@@ -1119,8 +1123,8 @@ for (let r = 0; r < 9; r++) {
               clickData[key] = { count: (clickData[key]?.count||0)+1, lastDate: date };
               saveClicks(); applyBrightness(div, key); applyBorder(div, key, cycleDays);
             }
-            logData.push({ key, cellText: cell.text, areaId, date, comment });
-            saveLogs(); renderLogs();
+            if (comment) { logData.push({ key, cellText: cell.text, areaId, date, comment }); saveLogs(); }
+            renderLogs();
           });
         }
       });
@@ -1225,8 +1229,7 @@ window.addEventListener('resize', adjustPanelOffsets);
 
 // ── 설정 패널 ──
 const CYCLE_OPTIONS = [
-  { label: '매일', days: 1 }, { label: '주', days: 7 }, { label: '월', days: 30 },
-  { label: '격월', days: 60 }, { label: '분기', days: 90 }, { label: '연', days: 365 },
+  { label: '매일', days: 1 }, { label: '주', days: 7 }, { label: '격주', days: 14 }, { label: '월', days: 30 },
 ];
 
 function renderSettingsPanel() {
@@ -1451,7 +1454,8 @@ function isCheckedInRange(key, startDate, endDate) {
 }
 function getItemsForPeriod(period) {
   const { start, end } = period === 'week' ? getWeekRange() : getMonthRange();
-  const targetCycles = period === 'week' ? [7] : [30, 60, 90, 365];
+  // 주: 7일, 월: 30일만 (격월/분기/연은 별도 처리)
+  const targetCycles = period === 'week' ? [7] : [30];
   const checked = [], unchecked = [];
   for (let r = 0; r < 9; r++) for (let c = 0; c < 9; c++) {
     const cell = grid[r][c];
@@ -1466,9 +1470,32 @@ function getItemsForPeriod(period) {
   }
   return { checked, unchecked, total: checked.length + unchecked.length };
 }
+// 격월/분기/연 장기 목표 체크 여부
+function getLongTermItems() {
+  const longCycles = [60, 90, 365];
+  const cycleLabel = { 60: '격월', 90: '분기', 365: '연' };
+  const { start } = getMonthRange();
+  const yearStart = getToday().slice(0,5) + '01-01';
+  const checked = [], unchecked = [];
+  for (let r = 0; r < 9; r++) for (let c = 0; c < 9; c++) {
+    const cell = grid[r][c];
+    if (!cell || cell.cls.includes('area-header') || cell.cls.includes('center-goal') || cell.cls.includes('center-block')) continue;
+    const cd = getEffectiveCycleDays(cell.text, cell.areaIdx, cell.itemIdx);
+    if (!longCycles.includes(cd)) continue;
+    const key = getCellKey(r, c);
+    const label = cell.text.replace(/\n/g, ' ');
+    const tag = cycleLabel[cd] || '';
+    const areaId = cell.cls.split(' ')[0];
+    const rangeStart = cd === 365 ? yearStart : start;
+    const item = { label, tag, key, cellText: cell.text, areaId };
+    if (isCheckedInRange(key, rangeStart, getToday())) checked.push({ ...item, done: true });
+    else unchecked.push({ ...item, done: false });
+  }
+  return { checked, unchecked };
+}
 function getAreaRatesForPeriod(period) {
   const { start, end } = period==='week' ? getWeekRange() : period==='month' ? getMonthRange() : { start: getToday(), end: getToday() };
-  const targetCycles = period==='day' ? [1] : period==='week' ? [7] : [30,60,90,365];
+  const targetCycles = period==='day' ? [1] : period==='week' ? [7] : [30];
   return areas.map((area, i) => {
     const [sr, sc] = blockPositions[i];
     let total = 0, checked = 0;
@@ -1619,6 +1646,112 @@ function renderPeriodContent(period) {
   const suffix = period.charAt(0).toUpperCase() + period.slice(1);
   renderAreaStats('areaStats' + suffix, period);
   renderCheckedList('checkedList' + suffix, period);
+  if (period === 'month') {
+    const el = document.getElementById('longTermList');
+    if (!el) return;
+    el.innerHTML = '';
+    const { checked, unchecked } = getLongTermItems();
+    const all = [...checked.map(i=>({...i,done:true})), ...unchecked.map(i=>({...i,done:false}))];
+    if (!all.length) { el.innerHTML = `<div style="font-size:11px;color:#505054">해당 항목 없음</div>`; return; }
+
+    const LONG_CYCLES = [{ label: '격월', days: 60 }, { label: '분기', days: 90 }, { label: '연', days: 365 }];
+
+    all.forEach(({ label, tag, done, key, cellText, areaId, r, c, areaIdx, itemIdx }) => {
+      const wrapper = document.createElement('div');
+      wrapper.style.cssText = 'display:flex;flex-direction:column;gap:0;background:#0f0f10;border:1px solid #1e1e20;border-radius:8px;overflow:hidden;transition:border-color 0.15s;';
+
+      // ── 기본 행 ──
+      const row = document.createElement('div');
+      row.style.cssText = 'display:flex;align-items:center;gap:8px;padding:9px 12px;cursor:pointer;';
+      row.innerHTML = `
+        <span style="font-size:9px;color:#505054;font-family:'IBM Plex Mono',monospace;flex-shrink:0;width:24px">${tag}</span>
+        <span style="font-size:11px;color:${done?'#e8e8e8':'#505054'};flex:1">${done?'✓ ':''}${label}</span>
+        <span style="font-size:10px;color:#383840;padding:2px 6px;border-radius:4px;border:1px solid #1e1e20;font-family:'IBM Plex Mono',monospace;cursor:pointer" class="lt-edit-btn">편집</span>`;
+
+      // ── 편집 패널 (숨김) ──
+      const editPanel = document.createElement('div');
+      editPanel.style.cssText = 'display:none;flex-direction:column;gap:8px;padding:10px 12px;border-top:1px solid #1e1e20;background:#0c0b10;';
+
+      const currentCycleDays = LONG_CYCLES.find(o => o.label === tag)?.days || 60;
+
+      editPanel.innerHTML = `
+        <input type="text" value="${label}" style="background:#141415;border:1px solid #1e1e20;border-radius:6px;color:#e8e8e8;font-family:'IBM Plex Sans KR',sans-serif;font-size:12px;padding:8px 10px;outline:none;width:100%;box-sizing:border-box;-webkit-user-select:text;user-select:text;" class="lt-text-input">
+        <div style="display:flex;gap:6px;align-items:center;">
+          <span style="font-size:10px;color:#505054;flex-shrink:0">주기</span>
+          ${LONG_CYCLES.map(o => `<button class="lt-cycle-btn" data-days="${o.days}" style="padding:4px 10px;border-radius:16px;border:1px solid ${o.days===currentCycleDays?'#505054':'#1e1e20'};background:${o.days===currentCycleDays?'#1e1e22':'transparent'};color:${o.days===currentCycleDays?'#e8e8e8':'#505054'};font-size:10px;cursor:pointer;font-family:'IBM Plex Sans KR',sans-serif;">${o.label}</button>`).join('')}
+          <div style="flex:1"></div>
+          <button class="lt-save-btn" style="padding:5px 12px;border-radius:6px;border:none;background:#e8e8e8;color:#0c0b10;font-size:11px;font-weight:600;cursor:pointer;font-family:'IBM Plex Sans KR',sans-serif;">저장</button>
+          <button class="lt-cancel-btn" style="padding:5px 10px;border-radius:6px;border:1px solid #1e1e20;background:transparent;color:#505054;font-size:11px;cursor:pointer;font-family:'IBM Plex Sans KR',sans-serif;">취소</button>
+        </div>`;
+
+      wrapper.appendChild(row);
+      wrapper.appendChild(editPanel);
+      el.appendChild(wrapper);
+
+      // 편집 버튼 토글
+      let editing = false;
+      row.querySelector('.lt-edit-btn').addEventListener('click', (e) => {
+        e.stopPropagation();
+        editing = !editing;
+        editPanel.style.display = editing ? 'flex' : 'none';
+        wrapper.style.borderColor = editing ? '#2a2a30' : '#1e1e20';
+      });
+
+      // + 체크 (행 클릭)
+      row.addEventListener('click', (e) => {
+        if (e.target.classList.contains('lt-edit-btn')) return;
+        openCalendar(cellText, areaId, key, (date, comment) => {
+          clickData[key] = { count: (clickData[key]?.count||0)+1, lastDate: date };
+          saveClicks();
+          if (comment) { logData.push({ key, cellText, areaId, date, comment }); saveLogs(); renderLogs(); }
+          renderPeriodContent('month');
+        });
+      });
+
+      // 주기 선택 토글
+      let selectedDays = currentCycleDays;
+      editPanel.querySelectorAll('.lt-cycle-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+          selectedDays = parseInt(btn.dataset.days);
+          editPanel.querySelectorAll('.lt-cycle-btn').forEach(b => {
+            const active = parseInt(b.dataset.days) === selectedDays;
+            b.style.borderColor = active ? '#505054' : '#1e1e20';
+            b.style.background = active ? '#1e1e22' : 'transparent';
+            b.style.color = active ? '#e8e8e8' : '#505054';
+          });
+        });
+      });
+
+      // 저장
+      editPanel.querySelector('.lt-save-btn').addEventListener('click', () => {
+        const newText = editPanel.querySelector('.lt-text-input').value.trim();
+        if (!newText) return;
+        // areaIdx/itemIdx가 필요 — key에서 r,c 추출
+        const [kr, kc] = key.split('_').map(Number);
+        const cellData = grid[kr][kc];
+        if (!cellData) return;
+        const ai = cellData.areaIdx, ii = cellData.itemIdx;
+        // 텍스트 업데이트
+        const newFormatted = newText.includes('/') ? newText.replace(/\//g, '\n') : newText;
+        areas[ai].items[ii] = newFormatted;
+        grid[kr][kc].text = newFormatted;
+        if (cellEls[kr]?.[kc]) cellEls[kr][kc].textContent = newFormatted;
+        // 주기 업데이트
+        if (!customCycles[ai]) customCycles[ai] = {};
+        customCycles[ai][ii] = selectedDays;
+        localStorage.setItem('mandart_custom_items', JSON.stringify(areas.map(a => a.items)));
+        localStorage.setItem('mandart_custom_cycles', JSON.stringify(customCycles));
+        renderPeriodContent('month');
+      });
+
+      // 취소
+      editPanel.querySelector('.lt-cancel-btn').addEventListener('click', () => {
+        editPanel.style.display = 'none';
+        wrapper.style.borderColor = '#1e1e20';
+        editing = false;
+      });
+    });
+  }
 }
 
 async function generateComment() {
@@ -1754,8 +1887,8 @@ function openBlockPopup(areaIdx) {
               saveClicks(); applyState(); applyBrightness(cellEls[r][c], key); applyBorder(cellEls[r][c], key, cycleDays);
               if (isStreakDay(getToday())) recordStreakToday();
             }
-            logData.push({ key, cellText: itemText, areaId: area.id, date, comment });
-            saveLogs(); renderLogs();
+            if (comment) { logData.push({ key, cellText: itemText, areaId: area.id, date, comment }); saveLogs(); }
+            renderLogs();
           });
           return;
         }
@@ -1775,8 +1908,8 @@ function openBlockPopup(areaIdx) {
               clickData[key] = { count: (clickData[key]?.count||0)+1, lastDate: date };
               saveClicks(); applyState(); applyBrightness(cellEls[r][c], key); applyBorder(cellEls[r][c], key, cycleDays);
             }
-            logData.push({ key, cellText: itemText, areaId: area.id, date, comment });
-            saveLogs(); renderLogs();
+            if (comment) { logData.push({ key, cellText: itemText, areaId: area.id, date, comment }); saveLogs(); }
+            renderLogs();
           });
         }
       });
