@@ -1261,7 +1261,18 @@ areas.forEach((area, i) => {
   i < 6 ? tabRow1.appendChild(btn) : tabRow2.appendChild(btn);
 });
 
-tabRow2.appendChild(document.createElement('div'));
+const homeBtn = document.createElement('button');
+homeBtn.className = 'tab-btn';
+homeBtn.innerHTML = `<div style="font-size:13px;line-height:1">⌂</div><span style="font-size:8px">홈</span>`;
+homeBtn.addEventListener('click', () => {
+  // 모든 패널 닫기
+  logPanelOpen = false; logPanel.classList.remove('open');
+  commentPanelOpen = false; commentPanel.classList.remove('open');
+  settingsPanelOpen = false; settingsPanel.classList.remove('open');
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+});
+tabRow2.appendChild(homeBtn);
 
 const commentPanel = document.getElementById('commentPanel');
 let commentPanelOpen = false;
