@@ -362,7 +362,7 @@
   }
   .comment-panel.open { display: block; }
   .comment-inner { width: 100%; max-width: 480px; margin: 0 auto; display: flex; flex-direction: column; gap: 20px; }
-  .comment-date-label { font-family: 'IBM Plex Mono', monospace; font-size: 9px; color: #505054; letter-spacing: 2px; text-align: center; }
+  .comment-date-label { font-family: 'IBM Plex Mono', monospace; font-size: 9px; color: #686874; letter-spacing: 2px; text-align: center; }
   .comment-box {
     background: #0f0f10; border: 1px solid #1e1e20;
     border-radius: 8px; padding: 22px 20px;
@@ -378,7 +378,7 @@
     font-size: 10px; color: #505054;
   }
   .comment-chip.done { border-color: #333; color: #888; }
-  .comment-section-label { font-size: 10px; color: #505054; margin-bottom: 6px; font-family: 'IBM Plex Mono', monospace; letter-spacing: 1px; }
+  .comment-section-label { font-size: 10px; color: #787884; margin-bottom: 6px; font-family: 'IBM Plex Mono', monospace; letter-spacing: 1px; }
   .comment-generate-btn {
     width: 100%; padding: 14px; border-radius: 6px;
     border: 1px solid #333; background: #181818;
@@ -407,7 +407,7 @@
     border-radius: 8px; padding: 14px 16px;
     display: flex; flex-direction: column; gap: 4px;
   }
-  .stat-card-label { font-family: 'IBM Plex Mono', monospace; font-size: 9px; color: #505054; letter-spacing: 1px; }
+  .stat-card-label { font-family: 'IBM Plex Mono', monospace; font-size: 9px; color: #787884; letter-spacing: 1px; }
   .stat-card-value { font-size: 26px; font-weight: 300; letter-spacing: -1px; color: #e8e8e8; line-height: 1; }
   .stat-card-value span { font-size: 12px; color: #505054; font-weight: 400; }
   .stat-card.streak .stat-card-value { color: #e07830; }
@@ -417,7 +417,7 @@
   .streak-day.today { outline: 1px solid #e07830; outline-offset: 1px; }
   .area-stats { display: flex; flex-direction: column; gap: 6px; }
   .area-stat-row { display: flex; align-items: center; gap: 8px; }
-  .area-stat-name { font-size: 10px; color: #505054; width: 72px; flex-shrink: 0; }
+  .area-stat-name { font-size: 10px; color: #787884; width: 72px; flex-shrink: 0; }
   .area-stat-bar-wrap { flex: 1; height: 4px; background: #1e1e20; border-radius: 2px; overflow: hidden; }
   .area-stat-bar { height: 100%; border-radius: 2px; transition: width 0.4s ease; }
   .area-stat-pct { font-family: 'IBM Plex Mono', monospace; font-size: 9px; color: #505054; width: 28px; text-align: right; }
@@ -600,7 +600,7 @@
       <div class="stat-card">
         <div class="stat-card-label">TODAY</div>
         <div class="stat-card-value" id="statToday">0 <span>%</span></div>
-        <div style="font-size:10px;color:#505054;margin-top:4px" id="statTodayDetail"></div>
+        <div style="font-size:10px;color:#787884;margin-top:4px" id="statTodayDetail"></div>
       </div>
     </div>
     <!-- 이번 주 약점 -->
@@ -1675,8 +1675,8 @@ function renderLongTermList() {
 
   // ── 추가 버튼 ──
   const addBtn = document.getElementById('ltAddBtn');
-  if (addBtn) {
-    addBtn.onclick = () => {
+  const addBtnBig = document.getElementById('addLongTermBtn');
+  const triggerAdd = () => {
       if (document.getElementById('ltAddForm')) return;
       let newDays = 90;
       const form = document.createElement('div');
@@ -1715,7 +1715,8 @@ function renderLongTermList() {
         renderLongTermList();
       };
     };
-  }
+  if (addBtn) addBtn.onclick = triggerAdd;
+  if (addBtnBig) addBtnBig.onclick = triggerAdd;
 
   if (!longTermGoals.length) {
     el.innerHTML = `<div style="font-size:11px;color:#505054">아직 항목이 없어요. + 추가로 시작해요</div>`;
