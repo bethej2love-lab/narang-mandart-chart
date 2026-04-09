@@ -657,6 +657,10 @@
 <div class="log-panel" id="logPanel">
   <div class="log-panel-title">기록</div>
   <div class="log-panel-count" id="logCount"></div>
+  <div style="position:relative;margin-bottom:14px;">
+    <input type="text" id="logSearch" placeholder="검색..." style="width:100%;background:#0f0f10;border:1px solid #1e1e20;border-radius:10px;color:#e8e8e8;font-family:'IBM Plex Sans KR',sans-serif;font-size:13px;padding:10px 36px 10px 14px;outline:none;box-sizing:border-box;-webkit-user-select:text;user-select:text;transition:border-color 0.15s;">
+    <span id="logSearchClear" style="display:none;position:absolute;right:12px;top:50%;transform:translateY(-50%);color:#505054;cursor:pointer;font-size:16px;line-height:1;">×</span>
+  </div>
   <div class="log-filter" id="logFilter"></div>
   <div class="log-list" id="logList"></div>
 </div>
@@ -998,23 +1002,38 @@ const areaNames = ['인성/품격','자기관리/루틴','독서/지식','체력
 const areaIds = areas.map(a => a.id);
 let activeFilter = 'all';
 
+let logSearchQuery = '';
+
 function renderLogs() {
   const list = document.getElementById('logList');
+  const q = logSearchQuery.trim().toLowerCase();
   const allFiltered = activeFilter === 'all' ? logData.map((l,i)=>({l,i})) : logData.map((l,i)=>({l,i})).filter(({l}) => l.areaId === activeFilter);
-  // 최근 추가순 (삽입 역순)
-  allFiltered.reverse();
+  const searched = q
+    ? allFiltered.filter(({l}) =>
+        l.cellText.replace(/\n/g,' ').toLowerCase().includes(q) ||
+        (l.comment || '').toLowerCase().includes(q) ||
+        (areaNames[areaIds.indexOf(l.areaId)] || '').toLowerCase().includes(q)
+      )
+    : allFiltered;
+  searched.reverse();
   const countEl = document.getElementById('logCount');
-  if (countEl) countEl.textContent = allFiltered.length ? `${allFiltered.length}개의 기록` : '';
-  if (!allFiltered.length) { list.innerHTML = '<div class="log-empty">아직 기록이 없어요<br><span style="font-size:11px;color:#383840">체크하면 자동으로 쌓여요</span></div>'; return; }
-  list.innerHTML = allFiltered.map(({l, i: realIdx}) => {
+  if (countEl) countEl.textContent = searched.length ? `${searched.length}개의 기록${q ? ` — "${logSearchQuery}"` : ''}` : '';
+  if (!searched.length) {
+    list.innerHTML = q
+      ? `<div class="log-empty">"${logSearchQuery}" 검색 결과가 없어요</div>`
+      : '<div class="log-empty">아직 기록이 없어요<br><span style="font-size:11px;color:#383840">체크하면 자동으로 쌓여요</span></div>';
+    return;
+  }
+  list.innerHTML = searched.map(({l, i: realIdx}) => {
     const areaName = areaNames[areaIds.indexOf(l.areaId)] || '';
     const accentColor = areaColorMap[l.areaId]?.hcol || '#505054';
+    const highlight = (text) => q ? text.replace(new RegExp(`(${q.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')})`, 'gi'), '<mark style="background:rgba(201,169,110,0.25);color:#e8e8e8;border-radius:2px;padding:0 1px">$1</mark>') : text;
     return `
     <div class="log-item" style="--log-accent:${accentColor}">
       <div class="log-item-header">
         <div>
-          <div class="log-item-title">${l.cellText.replace(/\n/g,' ')}</div>
-          <div class="log-item-area">${areaName}</div>
+          <div class="log-item-title">${highlight(l.cellText.replace(/\n/g,' '))}</div>
+          <div class="log-item-area">${highlight(areaName)}</div>
         </div>
         <div class="log-item-actions">
           <button class="log-item-edit" onclick="editLog(${realIdx})">수정</button>
@@ -1024,7 +1043,7 @@ function renderLogs() {
       <div class="log-item-meta">
         <div class="log-item-date">${l.date}</div>
       </div>
-      ${l.comment ? `<div class="log-item-comment">${l.comment}</div>` : ''}
+      ${l.comment ? `<div class="log-item-comment">${highlight(l.comment)}</div>` : ''}
     </div>`;
   }).join('');
 }
@@ -1064,6 +1083,19 @@ function buildFilter() {
     filter.appendChild(btn);
   });
 }
+
+// 검색 이벤트
+document.getElementById('logSearch').addEventListener('input', (e) => {
+  logSearchQuery = e.target.value;
+  document.getElementById('logSearchClear').style.display = logSearchQuery ? 'block' : 'none';
+  renderLogs();
+});
+document.getElementById('logSearchClear').addEventListener('click', () => {
+  logSearchQuery = '';
+  document.getElementById('logSearch').value = '';
+  document.getElementById('logSearchClear').style.display = 'none';
+  renderLogs();
+});
 
 // ── 그리드 렌더 ──
 const gridEl = document.getElementById('grid');
