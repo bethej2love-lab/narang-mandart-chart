@@ -2110,7 +2110,7 @@ function openBlockPopup(areaIdx) {
       const loggable = isLoggable(itemText, areaIdx, itemIdx);
 
       if (loggable) { const dot = document.createElement('div'); dot.className = 'log-dot'; cell.appendChild(dot); }
-      const textNode = document.createElement('span'); textNode.textContent = itemText.replace(/\n/g, ' '); cell.appendChild(textNode);
+      const textNode = document.createElement('span'); textNode.textContent = itemText; textNode.style.whiteSpace = 'pre-line'; cell.appendChild(textNode);
 
       const applyState = () => {
         const count = clickData[key]?.count || 0;
