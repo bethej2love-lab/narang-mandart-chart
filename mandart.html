@@ -625,7 +625,28 @@
     <div class="period-content" id="periodMonth">
       <div><div class="comment-section-label">영역별 달성률 (월)</div><div class="area-stats" id="areaStatsMonth"></div></div>
       <div><div class="comment-section-label">이번 달 한 것</div><div class="comment-checked-list" id="checkedListMonth"></div></div>
-      <div><div class="comment-section-label">장기 목표 현황 <span style="font-size:9px;color:#505054">(격월·분기·연)</span></div><div id="longTermList" style="display:flex;flex-direction:column;gap:6px;"></div></div>
+      <div><div class="comment-section-label" style="display:flex;align-items:center;justify-content:space-between;">
+        <span>장기 목표 현황 <span style="font-size:9px;color:#505054">(격월·분기·연)</span></span>
+        <button id="ltAddBtn" style="font-size:10px;color:#505054;background:transparent;border:1px solid #1e1e20;border-radius:6px;padding:3px 9px;cursor:pointer;font-family:'IBM Plex Sans KR',sans-serif;">+ 추가</button>
+      </div><div id="longTermList" style="display:flex;flex-direction:column;gap:6px;"></div>
+      <div id="longTermAddWrap" style="margin-top:2px;"></div>
+      <button id="addLongTermBtn" style="width:100%;padding:10px;border-radius:8px;border:1px dashed #2a2a30;background:transparent;color:#505054;font-family:'IBM Plex Sans KR',sans-serif;font-size:12px;cursor:pointer;margin-top:2px;transition:all 0.15s;" onmouseover="this.style.borderColor='#383840';this.style.color='#888'" onmouseout="this.style.borderColor='#2a2a30';this.style.color='#505054'">+ 장기 목표 추가</button>
+      <!-- 추가 패널 -->
+      <div id="addLongTermPanel" style="display:none;flex-direction:column;gap:8px;padding:12px;background:#0f0f10;border:1px solid #1e1e20;border-radius:8px;">
+        <input type="text" id="addLongTermText" placeholder="목표 항목 입력 (/ 로 줄바꿈)" style="background:#141415;border:1px solid #1e1e20;border-radius:6px;color:#e8e8e8;font-family:'IBM Plex Sans KR',sans-serif;font-size:12px;padding:8px 10px;outline:none;width:100%;box-sizing:border-box;-webkit-user-select:text;user-select:text;">
+        <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;">
+          <span style="font-size:10px;color:#505054;flex-shrink:0">영역</span>
+          <select id="addLongTermArea" style="background:#141415;border:1px solid #1e1e20;border-radius:6px;color:#e8e8e8;font-family:'IBM Plex Sans KR',sans-serif;font-size:11px;padding:5px 8px;outline:none;cursor:pointer;"></select>
+          <span style="font-size:10px;color:#505054;flex-shrink:0;margin-left:4px">주기</span>
+          <button class="alt-cycle" data-days="60" style="padding:4px 10px;border-radius:16px;border:1px solid #505054;background:#1e1e22;color:#e8e8e8;font-size:10px;cursor:pointer;font-family:'IBM Plex Sans KR',sans-serif;">격월</button>
+          <button class="alt-cycle" data-days="90" style="padding:4px 10px;border-radius:16px;border:1px solid #1e1e20;background:transparent;color:#505054;font-size:10px;cursor:pointer;font-family:'IBM Plex Sans KR',sans-serif;">분기</button>
+          <button class="alt-cycle" data-days="365" style="padding:4px 10px;border-radius:16px;border:1px solid #1e1e20;background:transparent;color:#505054;font-size:10px;cursor:pointer;font-family:'IBM Plex Sans KR',sans-serif;">연</button>
+        </div>
+        <div style="display:flex;gap:6px;justify-content:flex-end;">
+          <button id="addLongTermCancel" style="padding:6px 12px;border-radius:6px;border:1px solid #1e1e20;background:transparent;color:#505054;font-size:11px;cursor:pointer;font-family:'IBM Plex Sans KR',sans-serif;">취소</button>
+          <button id="addLongTermSave" style="padding:6px 14px;border-radius:6px;border:none;background:#e8e8e8;color:#0c0b10;font-size:11px;font-weight:600;cursor:pointer;font-family:'IBM Plex Sans KR',sans-serif;">저장</button>
+        </div>
+      </div></div>
     </div>
     <div class="comment-box loading" id="commentBox">버튼을 눌러 오늘 하루를 돌아봐요</div>
     <button class="comment-generate-btn" id="commentGenerateBtn">✦ 오늘 코멘트 받기</button>
@@ -784,12 +805,26 @@ function recordStreakToday() {
   saveStreakHistory();
 }
 
+// ── 장기 목표 (격월/분기/연) — 그리드와 완전 독립 ──
+// 구조: [{ id, text, cycle: 60|90|365, checkedDate: 'YYYY-MM-DD' | null }]
+let longTermGoals = [];
+try { longTermGoals = JSON.parse(localStorage.getItem('mandart_long_term')) || []; } catch(e) {}
+function saveLongTerm() { localStorage.setItem('mandart_long_term', JSON.stringify(longTermGoals)); }
+function ltGenId() { return Date.now().toString(36) + Math.random().toString(36).slice(2,5); }
+const LT_CYCLES = [{ label: '격월', days: 60 }, { label: '분기', days: 90 }, { label: '연', days: 365 }];
+function ltCycleLabel(days) { return LT_CYCLES.find(o => o.days === days)?.label || '분기'; }
+function ltIsChecked(goal) {
+  if (!goal.checkedDate) return false;
+  const { start } = getMonthRange();
+  const yearStart = getToday().slice(0,5) + '01-01';
+  const rangeStart = goal.cycle === 365 ? yearStart : start;
+  return goal.checkedDate >= rangeStart && goal.checkedDate <= getToday();
+}
+
 function getCycleDays(text) {
   if (!text) return 1;
   if (text.includes('음주') || text.includes('5회')) return 1;
-  if (text.includes('격월')) return 60;
-  if (text.includes('분기')) return 90;
-  if (text.includes('연 ') || text.includes('연\n') || /^연\d/.test(text)) return 365;
+  if (text.includes('격주')) return 14;
   if (text.includes('월')) return 30;
   if (text.includes('주')) return 7;
   return 1;
@@ -1472,25 +1507,9 @@ function getItemsForPeriod(period) {
 }
 // 격월/분기/연 장기 목표 체크 여부
 function getLongTermItems() {
-  const longCycles = [60, 90, 365];
-  const cycleLabel = { 60: '격월', 90: '분기', 365: '연' };
-  const { start } = getMonthRange();
-  const yearStart = getToday().slice(0,5) + '01-01';
-  const checked = [], unchecked = [];
-  for (let r = 0; r < 9; r++) for (let c = 0; c < 9; c++) {
-    const cell = grid[r][c];
-    if (!cell || cell.cls.includes('area-header') || cell.cls.includes('center-goal') || cell.cls.includes('center-block')) continue;
-    const cd = getEffectiveCycleDays(cell.text, cell.areaIdx, cell.itemIdx);
-    if (!longCycles.includes(cd)) continue;
-    const key = getCellKey(r, c);
-    const label = cell.text.replace(/\n/g, ' ');
-    const tag = cycleLabel[cd] || '';
-    const areaId = cell.cls.split(' ')[0];
-    const rangeStart = cd === 365 ? yearStart : start;
-    const item = { label, tag, key, cellText: cell.text, areaId };
-    if (isCheckedInRange(key, rangeStart, getToday())) checked.push({ ...item, done: true });
-    else unchecked.push({ ...item, done: false });
-  }
+  // 그리드 무관 — longTermGoals 독립 목록에서 읽기
+  const checked = longTermGoals.filter(g => ltIsChecked(g));
+  const unchecked = longTermGoals.filter(g => !ltIsChecked(g));
   return { checked, unchecked };
 }
 function getAreaRatesForPeriod(period) {
@@ -1646,112 +1665,161 @@ function renderPeriodContent(period) {
   const suffix = period.charAt(0).toUpperCase() + period.slice(1);
   renderAreaStats('areaStats' + suffix, period);
   renderCheckedList('checkedList' + suffix, period);
-  if (period === 'month') {
-    const el = document.getElementById('longTermList');
-    if (!el) return;
-    el.innerHTML = '';
-    const { checked, unchecked } = getLongTermItems();
-    const all = [...checked.map(i=>({...i,done:true})), ...unchecked.map(i=>({...i,done:false}))];
-    if (!all.length) { el.innerHTML = `<div style="font-size:11px;color:#505054">해당 항목 없음</div>`; return; }
+  if (period === 'month') renderLongTermList();
+}
 
-    const LONG_CYCLES = [{ label: '격월', days: 60 }, { label: '분기', days: 90 }, { label: '연', days: 365 }];
+function renderLongTermList() {
+  const el = document.getElementById('longTermList');
+  if (!el) return;
+  el.innerHTML = '';
 
-    all.forEach(({ label, tag, done, key, cellText, areaId, r, c, areaIdx, itemIdx }) => {
-      const wrapper = document.createElement('div');
-      wrapper.style.cssText = 'display:flex;flex-direction:column;gap:0;background:#0f0f10;border:1px solid #1e1e20;border-radius:8px;overflow:hidden;transition:border-color 0.15s;';
-
-      // ── 기본 행 ──
-      const row = document.createElement('div');
-      row.style.cssText = 'display:flex;align-items:center;gap:8px;padding:9px 12px;cursor:pointer;';
-      row.innerHTML = `
-        <span style="font-size:9px;color:#505054;font-family:'IBM Plex Mono',monospace;flex-shrink:0;width:24px">${tag}</span>
-        <span style="font-size:11px;color:${done?'#e8e8e8':'#505054'};flex:1">${done?'✓ ':''}${label}</span>
-        <span style="font-size:10px;color:#383840;padding:2px 6px;border-radius:4px;border:1px solid #1e1e20;font-family:'IBM Plex Mono',monospace;cursor:pointer" class="lt-edit-btn">편집</span>`;
-
-      // ── 편집 패널 (숨김) ──
-      const editPanel = document.createElement('div');
-      editPanel.style.cssText = 'display:none;flex-direction:column;gap:8px;padding:10px 12px;border-top:1px solid #1e1e20;background:#0c0b10;';
-
-      const currentCycleDays = LONG_CYCLES.find(o => o.label === tag)?.days || 60;
-
-      editPanel.innerHTML = `
-        <input type="text" value="${label}" style="background:#141415;border:1px solid #1e1e20;border-radius:6px;color:#e8e8e8;font-family:'IBM Plex Sans KR',sans-serif;font-size:12px;padding:8px 10px;outline:none;width:100%;box-sizing:border-box;-webkit-user-select:text;user-select:text;" class="lt-text-input">
-        <div style="display:flex;gap:6px;align-items:center;">
+  // ── 추가 버튼 ──
+  const addBtn = document.getElementById('ltAddBtn');
+  if (addBtn) {
+    addBtn.onclick = () => {
+      if (document.getElementById('ltAddForm')) return;
+      let newDays = 90;
+      const form = document.createElement('div');
+      form.id = 'ltAddForm';
+      form.style.cssText = 'background:#0c0b10;border:1px solid #2a2a30;border-radius:8px;padding:12px;display:flex;flex-direction:column;gap:8px;';
+      form.innerHTML = `
+        <input type="text" placeholder="항목 이름" id="ltNewText" style="background:#141415;border:1px solid #1e1e20;border-radius:6px;color:#e8e8e8;font-family:'IBM Plex Sans KR',sans-serif;font-size:12px;padding:8px 10px;outline:none;width:100%;box-sizing:border-box;-webkit-user-select:text;user-select:text;">
+        <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;">
           <span style="font-size:10px;color:#505054;flex-shrink:0">주기</span>
-          ${LONG_CYCLES.map(o => `<button class="lt-cycle-btn" data-days="${o.days}" style="padding:4px 10px;border-radius:16px;border:1px solid ${o.days===currentCycleDays?'#505054':'#1e1e20'};background:${o.days===currentCycleDays?'#1e1e22':'transparent'};color:${o.days===currentCycleDays?'#e8e8e8':'#505054'};font-size:10px;cursor:pointer;font-family:'IBM Plex Sans KR',sans-serif;">${o.label}</button>`).join('')}
-          <div style="flex:1"></div>
-          <button class="lt-save-btn" style="padding:5px 12px;border-radius:6px;border:none;background:#e8e8e8;color:#0c0b10;font-size:11px;font-weight:600;cursor:pointer;font-family:'IBM Plex Sans KR',sans-serif;">저장</button>
-          <button class="lt-cancel-btn" style="padding:5px 10px;border-radius:6px;border:1px solid #1e1e20;background:transparent;color:#505054;font-size:11px;cursor:pointer;font-family:'IBM Plex Sans KR',sans-serif;">취소</button>
+          ${LT_CYCLES.map(o => `<button class="lt-new-cycle" data-days="${o.days}" style="padding:4px 10px;border-radius:16px;border:1px solid ${o.days===90?'#505054':'#1e1e20'};background:${o.days===90?'#1e1e22':'transparent'};color:${o.days===90?'#e8e8e8':'#505054'};font-size:10px;cursor:pointer;font-family:'IBM Plex Sans KR',sans-serif;">${o.label}</button>`).join('')}
+        </div>
+        <div style="display:flex;gap:6px;justify-content:flex-end;">
+          <button id="ltNewCancel" style="padding:6px 12px;border-radius:6px;border:1px solid #1e1e20;background:transparent;color:#505054;font-size:11px;cursor:pointer;font-family:'IBM Plex Sans KR',sans-serif;">취소</button>
+          <button id="ltNewSave" style="padding:6px 14px;border-radius:6px;border:none;background:#e8e8e8;color:#0c0b10;font-size:11px;font-weight:600;cursor:pointer;font-family:'IBM Plex Sans KR',sans-serif;">추가</button>
         </div>`;
+      el.prepend(form);
+      document.getElementById('ltNewText').focus();
 
-      wrapper.appendChild(row);
-      wrapper.appendChild(editPanel);
-      el.appendChild(wrapper);
-
-      // 편집 버튼 토글
-      let editing = false;
-      row.querySelector('.lt-edit-btn').addEventListener('click', (e) => {
-        e.stopPropagation();
-        editing = !editing;
-        editPanel.style.display = editing ? 'flex' : 'none';
-        wrapper.style.borderColor = editing ? '#2a2a30' : '#1e1e20';
-      });
-
-      // + 체크 (행 클릭)
-      row.addEventListener('click', (e) => {
-        if (e.target.classList.contains('lt-edit-btn')) return;
-        openCalendar(cellText, areaId, key, (date, comment) => {
-          clickData[key] = { count: (clickData[key]?.count||0)+1, lastDate: date };
-          saveClicks();
-          if (comment) { logData.push({ key, cellText, areaId, date, comment }); saveLogs(); renderLogs(); }
-          renderPeriodContent('month');
-        });
-      });
-
-      // 주기 선택 토글
-      let selectedDays = currentCycleDays;
-      editPanel.querySelectorAll('.lt-cycle-btn').forEach(btn => {
+      form.querySelectorAll('.lt-new-cycle').forEach(btn => {
         btn.addEventListener('click', () => {
-          selectedDays = parseInt(btn.dataset.days);
-          editPanel.querySelectorAll('.lt-cycle-btn').forEach(b => {
-            const active = parseInt(b.dataset.days) === selectedDays;
-            b.style.borderColor = active ? '#505054' : '#1e1e20';
-            b.style.background = active ? '#1e1e22' : 'transparent';
-            b.style.color = active ? '#e8e8e8' : '#505054';
+          newDays = parseInt(btn.dataset.days);
+          form.querySelectorAll('.lt-new-cycle').forEach(b => {
+            const a = parseInt(b.dataset.days) === newDays;
+            b.style.borderColor = a ? '#505054' : '#1e1e20';
+            b.style.background = a ? '#1e1e22' : 'transparent';
+            b.style.color = a ? '#e8e8e8' : '#505054';
           });
         });
       });
+      document.getElementById('ltNewCancel').onclick = () => form.remove();
+      document.getElementById('ltNewSave').onclick = () => {
+        const text = document.getElementById('ltNewText').value.trim();
+        if (!text) return;
+        longTermGoals.push({ id: ltGenId(), text, cycle: newDays, checkedDate: null });
+        saveLongTerm();
+        renderLongTermList();
+      };
+    };
+  }
 
-      // 저장
-      editPanel.querySelector('.lt-save-btn').addEventListener('click', () => {
-        const newText = editPanel.querySelector('.lt-text-input').value.trim();
-        if (!newText) return;
-        // areaIdx/itemIdx가 필요 — key에서 r,c 추출
-        const [kr, kc] = key.split('_').map(Number);
-        const cellData = grid[kr][kc];
-        if (!cellData) return;
-        const ai = cellData.areaIdx, ii = cellData.itemIdx;
-        // 텍스트 업데이트
-        const newFormatted = newText.includes('/') ? newText.replace(/\//g, '\n') : newText;
-        areas[ai].items[ii] = newFormatted;
-        grid[kr][kc].text = newFormatted;
-        if (cellEls[kr]?.[kc]) cellEls[kr][kc].textContent = newFormatted;
-        // 주기 업데이트
-        if (!customCycles[ai]) customCycles[ai] = {};
-        customCycles[ai][ii] = selectedDays;
-        localStorage.setItem('mandart_custom_items', JSON.stringify(areas.map(a => a.items)));
-        localStorage.setItem('mandart_custom_cycles', JSON.stringify(customCycles));
-        renderPeriodContent('month');
-      });
+  if (!longTermGoals.length) {
+    el.innerHTML = `<div style="font-size:11px;color:#505054">아직 항목이 없어요. + 추가로 시작해요</div>`;
+    return;
+  }
 
-      // 취소
-      editPanel.querySelector('.lt-cancel-btn').addEventListener('click', () => {
-        editPanel.style.display = 'none';
-        wrapper.style.borderColor = '#1e1e20';
-        editing = false;
+  // 미완료 먼저, 완료 후
+  const sorted = [
+    ...longTermGoals.filter(g => !ltIsChecked(g)),
+    ...longTermGoals.filter(g => ltIsChecked(g)),
+  ];
+
+  sorted.forEach(goal => {
+    const done = ltIsChecked(goal);
+    const tag = ltCycleLabel(goal.cycle);
+    const wrapper = document.createElement('div');
+    wrapper.style.cssText = 'display:flex;flex-direction:column;background:#0f0f10;border:1px solid #1e1e20;border-radius:8px;overflow:hidden;transition:border-color 0.15s;';
+
+    // 기본 행
+    const row = document.createElement('div');
+    row.style.cssText = 'display:flex;align-items:center;gap:8px;padding:9px 12px;cursor:pointer;';
+    row.innerHTML = `
+      <span style="font-size:9px;color:#505054;font-family:'IBM Plex Mono',monospace;flex-shrink:0;width:24px">${tag}</span>
+      <span style="font-size:11px;color:${done?'#e8e8e8':'#505054'};flex:1;${done?'text-decoration:none':''}">${done?'✓ ':''}${goal.text}</span>
+      <span class="lt-edit-btn" style="font-size:10px;color:#383840;padding:2px 6px;border-radius:4px;border:1px solid #1e1e20;font-family:'IBM Plex Mono',monospace;flex-shrink:0;">편집</span>`;
+
+    // 편집 패널
+    const editPanel = document.createElement('div');
+    editPanel.style.cssText = 'display:none;flex-direction:column;gap:8px;padding:10px 12px;border-top:1px solid #1e1e20;background:#0c0b10;';
+    let selDays = goal.cycle;
+    editPanel.innerHTML = `
+      <input type="text" value="${goal.text}" class="lt-text-input" style="background:#141415;border:1px solid #1e1e20;border-radius:6px;color:#e8e8e8;font-family:'IBM Plex Sans KR',sans-serif;font-size:12px;padding:8px 10px;outline:none;width:100%;box-sizing:border-box;-webkit-user-select:text;user-select:text;">
+      <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;">
+        <span style="font-size:10px;color:#505054;flex-shrink:0">주기</span>
+        ${LT_CYCLES.map(o => `<button class="lt-cycle-btn" data-days="${o.days}" style="padding:4px 10px;border-radius:16px;border:1px solid ${o.days===goal.cycle?'#505054':'#1e1e20'};background:${o.days===goal.cycle?'#1e1e22':'transparent'};color:${o.days===goal.cycle?'#e8e8e8':'#505054'};font-size:10px;cursor:pointer;font-family:'IBM Plex Sans KR',sans-serif;">${o.label}</button>`).join('')}
+        <div style="flex:1"></div>
+        <button class="lt-delete-btn" style="padding:5px 10px;border-radius:6px;border:1px solid rgba(200,80,80,0.3);background:transparent;color:#c05050;font-size:11px;cursor:pointer;font-family:'IBM Plex Sans KR',sans-serif;">삭제</button>
+        <button class="lt-save-btn" style="padding:5px 12px;border-radius:6px;border:none;background:#e8e8e8;color:#0c0b10;font-size:11px;font-weight:600;cursor:pointer;font-family:'IBM Plex Sans KR',sans-serif;">저장</button>
+        <button class="lt-cancel-btn" style="padding:5px 10px;border-radius:6px;border:1px solid #1e1e20;background:transparent;color:#505054;font-size:11px;cursor:pointer;font-family:'IBM Plex Sans KR',sans-serif;">취소</button>
+      </div>`;
+
+    wrapper.appendChild(row); wrapper.appendChild(editPanel);
+    el.appendChild(wrapper);
+
+    // 체크 (행 클릭)
+    row.addEventListener('click', (e) => {
+      if (e.target.classList.contains('lt-edit-btn')) return;
+      const idx = longTermGoals.findIndex(g => g.id === goal.id);
+      if (idx === -1) return;
+      longTermGoals[idx].checkedDate = done ? null : getToday();
+      saveLongTerm();
+      renderLongTermList();
+    });
+
+    // 편집 토글
+    let editing = false;
+    row.querySelector('.lt-edit-btn').addEventListener('click', (e) => {
+      e.stopPropagation();
+      editing = !editing;
+      editPanel.style.display = editing ? 'flex' : 'none';
+      wrapper.style.borderColor = editing ? '#2a2a30' : '#1e1e20';
+    });
+
+    // 주기 선택
+    editPanel.querySelectorAll('.lt-cycle-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        selDays = parseInt(btn.dataset.days);
+        editPanel.querySelectorAll('.lt-cycle-btn').forEach(b => {
+          const a = parseInt(b.dataset.days) === selDays;
+          b.style.borderColor = a ? '#505054' : '#1e1e20';
+          b.style.background = a ? '#1e1e22' : 'transparent';
+          b.style.color = a ? '#e8e8e8' : '#505054';
+        });
       });
     });
-  }
+
+    // 저장
+    editPanel.querySelector('.lt-save-btn').addEventListener('click', () => {
+      const newText = editPanel.querySelector('.lt-text-input').value.trim();
+      if (!newText) return;
+      const idx = longTermGoals.findIndex(g => g.id === goal.id);
+      if (idx === -1) return;
+      longTermGoals[idx].text = newText;
+      longTermGoals[idx].cycle = selDays;
+      saveLongTerm();
+      renderLongTermList();
+    });
+
+    // 삭제
+    editPanel.querySelector('.lt-delete-btn').addEventListener('click', () => {
+      showConfirm('이 장기 목표를 삭제할까요?', () => {
+        longTermGoals = longTermGoals.filter(g => g.id !== goal.id);
+        saveLongTerm();
+        renderLongTermList();
+      });
+    });
+
+    // 취소
+    editPanel.querySelector('.lt-cancel-btn').addEventListener('click', () => {
+      editPanel.style.display = 'none';
+      wrapper.style.borderColor = '#1e1e20';
+      editing = false;
+    });
+  });
 }
 
 async function generateComment() {
