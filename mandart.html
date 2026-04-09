@@ -808,24 +808,8 @@ function recordStreakToday() {
 }
 
 // ── 장기 목표 (격월/분기/연) — 그리드와 완전 독립 ──
-// 구조: [{ id, text, cycle: 60|90|365, logs: [{ period, memo, date }] }]
-let longTermGoals = [];
-try {
-  const raw = JSON.parse(localStorage.getItem('mandart_long_term')) || [];
-  // 구버전 마이그레이션 (checkedDate → logs)
-  longTermGoals = raw.map(g => {
-    if (!g.logs) {
-      return { ...g, logs: g.checkedDate ? [{ period: ltCurrentPeriod(g.cycle), memo: '', date: g.checkedDate }] : [] };
-    }
-    return g;
-  });
-} catch(e) {}
-function saveLongTerm() { localStorage.setItem('mandart_long_term', JSON.stringify(longTermGoals)); }
-function ltGenId() { return Date.now().toString(36) + Math.random().toString(36).slice(2,5); }
 const LT_CYCLES = [{ label: '격월', days: 60 }, { label: '분기', days: 90 }, { label: '연', days: 365 }];
 function ltCycleLabel(days) { return LT_CYCLES.find(o => o.days === days)?.label || '분기'; }
-
-// 주기별 기간 목록 생성
 function ltPeriods(cycle) {
   const y = new Date().getFullYear();
   if (cycle === 365) return [`${y}년`];
@@ -833,7 +817,6 @@ function ltPeriods(cycle) {
   if (cycle === 60)  return ['1-2월','3-4월','5-6월','7-8월','9-10월','11-12월'];
   return [];
 }
-// 현재 해당하는 기간
 function ltCurrentPeriod(cycle) {
   const m = new Date().getMonth() + 1;
   const y = new Date().getFullYear();
@@ -842,11 +825,24 @@ function ltCurrentPeriod(cycle) {
   if (cycle === 60)  return ['1-2월','3-4월','5-6월','7-8월','9-10월','11-12월'][Math.floor((m-1)/2)];
   return '';
 }
-// 현재 기간에 체크된 기록 있는지
 function ltIsChecked(goal) {
   const cur = ltCurrentPeriod(goal.cycle);
   return (goal.logs || []).some(l => l.period === cur);
 }
+function ltGenId() { return Date.now().toString(36) + Math.random().toString(36).slice(2,5); }
+
+// 구조: [{ id, text, cycle: 60|90|365, logs: [{ period, memo, date }] }]
+let longTermGoals = [];
+try {
+  const raw = JSON.parse(localStorage.getItem('mandart_long_term')) || [];
+  longTermGoals = raw.map(g => {
+    if (!g.logs) {
+      return { ...g, logs: g.checkedDate ? [{ period: ltCurrentPeriod(g.cycle), memo: '', date: g.checkedDate }] : [] };
+    }
+    return g;
+  });
+} catch(e) {}
+function saveLongTerm() { localStorage.setItem('mandart_long_term', JSON.stringify(longTermGoals)); }
 
 function getCycleDays(text) {
   if (!text) return 1;
@@ -1246,7 +1242,9 @@ areas.forEach((area, i) => {
   btn.className = 'tab-btn';
   btn.innerHTML = `<div class="tab-dot" style="background:var(${areaColors[i]})"></div><span style="white-space:pre-line;text-align:center;font-size:8px">${areaLabels[i]}</span>`;
   btn.addEventListener('click', () => {
-    if (logPanelOpen) { logPanel.classList.remove('open'); logPanelOpen = false; }
+    logPanelOpen = false; logPanel.classList.remove('open');
+    commentPanelOpen = false; commentPanel.classList.remove('open');
+    settingsPanelOpen = false; settingsPanel.classList.remove('open');
     document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
     btn.classList.add('active');
     const [sr,sc] = blockPositions[i];
@@ -1263,7 +1261,7 @@ areas.forEach((area, i) => {
 
 const homeBtn = document.createElement('button');
 homeBtn.className = 'tab-btn';
-homeBtn.innerHTML = `<div style="font-size:13px;line-height:1">⌂</div><span style="font-size:8px">홈</span>`;
+homeBtn.innerHTML = `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg><span style="font-size:8px">홈</span>`;
 homeBtn.addEventListener('click', () => {
   // 모든 패널 닫기
   logPanelOpen = false; logPanel.classList.remove('open');
@@ -1298,7 +1296,14 @@ logBtn.addEventListener('click', () => {
   logPanelOpen = !logPanelOpen;
   logPanel.classList.toggle('open', logPanelOpen);
   document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
-  if (logPanelOpen) { logBtn.classList.add('active'); buildFilter(); renderLogs(); }
+  if (logPanelOpen) {
+    logSearchQuery = '';
+    const searchEl = document.getElementById('logSearch');
+    const clearEl = document.getElementById('logSearchClear');
+    if (searchEl) searchEl.value = '';
+    if (clearEl) clearEl.style.display = 'none';
+    logBtn.classList.add('active'); buildFilter(); renderLogs();
+  }
 });
 tabRow2.appendChild(logBtn);
 
@@ -1463,6 +1468,7 @@ function rebuildGrid() {
       }
     });
   });
+  fixMobileGrid();
   autoFitCells();
 }
 
@@ -1556,7 +1562,7 @@ function isCheckedInRange(key, startDate, endDate) {
 function getItemsForPeriod(period) {
   const { start, end } = period === 'week' ? getWeekRange() : getMonthRange();
   // 주: 7일, 월: 30일만 (격월/분기/연은 별도 처리)
-  const targetCycles = period === 'week' ? [7] : [30];
+  const targetCycles = period === 'week' ? [7, 14] : [30];
   const checked = [], unchecked = [];
   for (let r = 0; r < 9; r++) for (let c = 0; c < 9; c++) {
     const cell = grid[r][c];
@@ -1579,7 +1585,7 @@ function getLongTermItems() {
 }
 function getAreaRatesForPeriod(period) {
   const { start, end } = period==='week' ? getWeekRange() : period==='month' ? getMonthRange() : { start: getToday(), end: getToday() };
-  const targetCycles = period==='day' ? [1] : period==='week' ? [7] : [30];
+  const targetCycles = period==='day' ? [1] : period==='week' ? [7, 14] : [30];
   return areas.map((area, i) => {
     const [sr, sc] = blockPositions[i];
     let total = 0, checked = 0;
@@ -1642,8 +1648,13 @@ function getWeakItems(topN = 5) {
       if (!cell || cell.cls.includes('area-header') || cell.cls.includes('center-goal') || cell.cls.includes('center-block')) continue;
       if (getEffectiveCycleDays(cell.text, cell.areaIdx, cell.itemIdx) !== 1) continue;
       const key = getCellKey(r, c);
+      const last = clickData[key]?.lastDate;
+      // 최근 7일 중 체크된 날 수 (lastDate가 past7 안에 있으면 1일로 카운트)
+      const checkedDays = last && past7.includes(last) ? 1 : 0;
+      // 전체 count를 7일 기준으로 근사 (최대 7)
       const totalCount = clickData[key]?.count || 0;
-      const pct = Math.round(Math.min(totalCount, 7) / 7 * 100);
+      const approxDays = Math.min(totalCount, 7);
+      const pct = Math.round(approxDays / 7 * 100);
       results.push({ label: cell.text.replace(/\n/g, ' '), pct, checkedToday: isClickedToday(key, 1), areaId: cell.cls.split(' ')[0] });
     }
   }
