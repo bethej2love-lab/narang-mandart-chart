@@ -2110,39 +2110,80 @@ function getTriviaAreaId() {
 
 function renderTriviaSection() {
   const { pct } = getTodayRate();
-  const unlocked = pct >= 50;
+  const unlocked50 = pct >= 50;
+  const unlocked80 = pct >= 80;
   const btn = document.getElementById('triviaBtn');
   const triviaBox = document.getElementById('triviaBox');
   const lockLabel = document.getElementById('triviaLockLabel');
   if (!btn) return;
 
-  // 오늘 캐시 확인
   let cached = null;
   try { cached = JSON.parse(localStorage.getItem('mandart_trivia_cache')); } catch(e) {}
   const hasCached = cached && cached.date === getToday() && cached.text;
+
+  let cached2 = null;
+  try { cached2 = JSON.parse(localStorage.getItem('mandart_trivia_cache2')); } catch(e) {}
+  const hasCached2 = cached2 && cached2.date === getToday() && cached2.text;
 
   const areaId = getTriviaAreaId();
   const topic = TRIVIA_TOPICS[areaId];
   lockLabel.textContent = `today · ${topic.name}`;
 
+  // 1차 결과 표시
   if (hasCached) {
     triviaBox.style.display = 'block';
     triviaBox.textContent = cached.text;
     btn.style.display = 'none';
-    return;
+  } else {
+    triviaBox.style.display = 'none';
+    if (unlocked50) {
+      btn.disabled = false;
+      btn.style.cssText = "width:100%;padding:13px;border-radius:6px;border:1px solid #2a2a30;background:#0f0f10;color:#c8a860;font-family:'IBM Plex Sans KR',sans-serif;font-size:12px;font-weight:500;cursor:pointer;transition:all 0.2s;-webkit-tap-highlight-color:transparent;";
+      btn.textContent = '✦ 오늘의 발견 열기';
+      btn.onclick = () => requireApiKey(generateTrivia);
+    } else {
+      btn.disabled = true;
+      btn.style.cssText = "width:100%;padding:13px;border-radius:6px;border:1px dashed #1e1e20;background:transparent;color:#383840;font-family:'IBM Plex Sans KR',sans-serif;font-size:12px;font-weight:500;cursor:not-allowed;transition:all 0.2s;";
+      btn.textContent = `🔒 오늘 목표 ${pct}% / 50% 달성 시 잠금 해제`;
+    }
   }
 
-  triviaBox.style.display = 'none';
+  // 2차 보너스 버튼 처리
+  let btn2 = document.getElementById('triviaBtn2');
+  let triviaBox2 = document.getElementById('triviaBox2');
 
-  if (unlocked) {
-    btn.disabled = false;
-    btn.style.cssText = 'width:100%;padding:13px;border-radius:6px;border:1px solid #2a2a30;background:#0f0f10;color:#c8a860;font-family:\'IBM Plex Sans KR\',sans-serif;font-size:12px;font-weight:500;cursor:pointer;transition:all 0.2s;-webkit-tap-highlight-color:transparent;';
-    btn.textContent = '✦ 오늘의 발견 열기';
-    btn.onclick = () => requireApiKey(generateTrivia);
+  // 아직 없으면 생성
+  if (!btn2) {
+    const section = document.getElementById('triviaSection');
+    triviaBox2 = document.createElement('div');
+    triviaBox2.id = 'triviaBox2';
+    triviaBox2.style.cssText = 'display:none;background:#0f0f10;border:1px solid #2a2a30;border-radius:8px;padding:18px 20px;font-size:13px;line-height:1.8;color:#e8e8e8;white-space:pre-wrap;letter-spacing:-0.2px;position:relative;';
+    btn2 = document.createElement('button');
+    btn2.id = 'triviaBtn2';
+    section.appendChild(triviaBox2);
+    section.appendChild(btn2);
+  }
+
+  if (hasCached2) {
+    triviaBox2.style.display = 'block';
+    triviaBox2.innerHTML = `<span style="font-size:9px;color:#c8a860;font-family:'IBM Plex Mono',monospace;display:block;margin-bottom:8px;letter-spacing:1px;">BONUS</span>${cached2.text}`;
+    btn2.style.display = 'none';
+  } else if (hasCached && unlocked80) {
+    // 1차 받았고 80% 넘었으면 보너스 버튼 활성화
+    triviaBox2.style.display = 'none';
+    btn2.disabled = false;
+    btn2.style.cssText = "width:100%;padding:13px;border-radius:6px;border:1px solid #c8a860;background:rgba(200,168,96,0.06);color:#c8a860;font-family:'IBM Plex Sans KR',sans-serif;font-size:12px;font-weight:500;cursor:pointer;transition:all 0.2s;-webkit-tap-highlight-color:transparent;";
+    btn2.textContent = '✦ 보너스 발견 열기  (80% 달성!)';
+    btn2.onclick = () => requireApiKey(generateTrivia2);
+  } else if (hasCached && !unlocked80) {
+    // 1차 받았지만 80% 미달
+    triviaBox2.style.display = 'none';
+    btn2.disabled = true;
+    btn2.style.cssText = "width:100%;padding:13px;border-radius:6px;border:1px dashed #1e1e20;background:transparent;color:#2a2a2a;font-family:'IBM Plex Sans KR',sans-serif;font-size:12px;font-weight:500;cursor:not-allowed;transition:all 0.2s;";
+    btn2.textContent = `🔒 보너스 발견  (${pct}% / 80% 달성 시)`;
   } else {
-    btn.disabled = true;
-    btn.style.cssText = 'width:100%;padding:13px;border-radius:6px;border:1px dashed #1e1e20;background:transparent;color:#383840;font-family:\'IBM Plex Sans KR\',sans-serif;font-size:12px;font-weight:500;cursor:not-allowed;transition:all 0.2s;';
-    btn.textContent = `🔒 오늘 목표 ${pct}% / 50% 달성 시 잠금 해제`;
+    btn2.style.display = 'none';
+    triviaBox2.style.display = 'none';
   }
 }
 
@@ -2150,53 +2191,70 @@ async function generateTrivia() {
   const btn = document.getElementById('triviaBtn');
   const triviaBox = document.getElementById('triviaBox');
   if (!btn || !triviaBox) return;
-
   btn.disabled = true;
   btn.textContent = '발견하는 중...';
-
   const areaId = getTriviaAreaId();
   const topic = TRIVIA_TOPICS[areaId];
-
   try {
     const prompt = `${topic.prompt}를 알려줘.
 조건:
 - 진짜 흥미롭고 잘 알려지지 않은 사실이어야 함
 - 2~3문장으로 짧고 임팩트 있게
-- "오늘의 발견:" 같은 접두어 없이 바로 내용만
+- 접두어 없이 바로 내용만
 - 한국어로, 이모지 없이
 - 출처가 있다면 끝에 간략히 (예: — 하버드 연구, 2019)`;
-
     const res = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-api-key': getApiKey(),
-        'anthropic-version': '2023-06-01',
-        'anthropic-dangerous-direct-browser-access': 'true'
-      },
-      body: JSON.stringify({
-        model: 'claude-sonnet-4-20250514',
-        max_tokens: 300,
-        messages: [{ role: 'user', content: prompt }]
-      })
+      headers: { 'Content-Type': 'application/json', 'x-api-key': getApiKey(), 'anthropic-version': '2023-06-01', 'anthropic-dangerous-direct-browser-access': 'true' },
+      body: JSON.stringify({ model: 'claude-sonnet-4-20250514', max_tokens: 300, messages: [{ role: 'user', content: prompt }] })
     });
     const data = await res.json();
-    if (!res.ok) {
-      btn.disabled = false;
-      btn.textContent = '✦ 오늘의 발견 열기';
-      return;
-    }
+    if (!res.ok) { btn.disabled = false; btn.textContent = '✦ 오늘의 발견 열기'; return; }
     const text = data.content?.[0]?.text || '';
     if (!text) return;
-
     localStorage.setItem('mandart_trivia_cache', JSON.stringify({ date: getToday(), text, areaId }));
     triviaBox.textContent = text;
     triviaBox.style.display = 'block';
     btn.style.display = 'none';
-  } catch(e) {
-    btn.disabled = false;
-    btn.textContent = '✦ 오늘의 발견 열기';
-  }
+    renderTriviaSection(); // 보너스 버튼 표시
+  } catch(e) { btn.disabled = false; btn.textContent = '✦ 오늘의 발견 열기'; }
+}
+
+async function generateTrivia2() {
+  const btn2 = document.getElementById('triviaBtn2');
+  const triviaBox2 = document.getElementById('triviaBox2');
+  if (!btn2 || !triviaBox2) return;
+  btn2.disabled = true;
+  btn2.textContent = '보너스 발견하는 중...';
+
+  // 오늘 영역 말고 다른 영역 랜덤 뽑기
+  const todayAreaId = getTriviaAreaId();
+  const otherIds = Object.keys(TRIVIA_TOPICS).filter(id => id !== todayAreaId);
+  const bonusAreaId = otherIds[Math.floor(Math.random() * otherIds.length)];
+  const topic = TRIVIA_TOPICS[bonusAreaId];
+
+  try {
+    const prompt = `${topic.prompt}를 알려줘.
+조건:
+- 오늘의 첫 번째 trivia와 다른 느낌으로, 더 놀랍고 반전 있는 사실이어야 함
+- 2~3문장으로 짧고 임팩트 있게
+- 접두어 없이 바로 내용만
+- 한국어로, 이모지 없이
+- 출처가 있다면 끝에 간략히`;
+    const res = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-api-key': getApiKey(), 'anthropic-version': '2023-06-01', 'anthropic-dangerous-direct-browser-access': 'true' },
+      body: JSON.stringify({ model: 'claude-sonnet-4-20250514', max_tokens: 300, messages: [{ role: 'user', content: prompt }] })
+    });
+    const data = await res.json();
+    if (!res.ok) { btn2.disabled = false; btn2.textContent = '✦ 보너스 발견 열기  (80% 달성!)'; return; }
+    const text = data.content?.[0]?.text || '';
+    if (!text) return;
+    localStorage.setItem('mandart_trivia_cache2', JSON.stringify({ date: getToday(), text, areaId: bonusAreaId }));
+    triviaBox2.innerHTML = `<span style="font-size:9px;color:#c8a860;font-family:'IBM Plex Mono',monospace;display:block;margin-bottom:8px;letter-spacing:1px;">BONUS</span>${text}`;
+    triviaBox2.style.display = 'block';
+    btn2.style.display = 'none';
+  } catch(e) { btn2.disabled = false; btn2.textContent = '✦ 보너스 발견 열기  (80% 달성!)'; }
 }
 const blockOverlay = document.getElementById('blockOverlay');
 const blockGridEl = document.getElementById('blockGrid');
