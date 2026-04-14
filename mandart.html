@@ -648,6 +648,18 @@
     </div>
     <div class="comment-box loading" id="commentBox">버튼을 눌러 오늘 하루를 돌아봐요</div>
     <button class="comment-generate-btn" id="commentGenerateBtn">✦ 오늘 코멘트 받기</button>
+
+    <!-- 오늘의 발견 (보상 trivia) -->
+    <div id="triviaSection" style="display:flex;flex-direction:column;gap:8px;">
+      <div style="display:flex;align-items:center;justify-content:space-between;">
+        <div class="comment-section-label" style="margin-bottom:0">오늘의 발견</div>
+        <span id="triviaLockLabel" style="font-size:9px;color:#383840;font-family:'IBM Plex Mono',monospace;"></span>
+      </div>
+      <div id="triviaBox" style="display:none;background:#0f0f10;border:1px solid #1e1e20;border-radius:8px;padding:18px 20px;font-size:13px;line-height:1.8;color:#e8e8e8;white-space:pre-wrap;letter-spacing:-0.2px;"></div>
+      <button id="triviaBtn" style="width:100%;padding:13px;border-radius:6px;border:1px dashed #2a2a30;background:transparent;color:#383840;font-family:'IBM Plex Sans KR',sans-serif;font-size:12px;font-weight:500;cursor:not-allowed;transition:all 0.2s;-webkit-tap-highlight-color:transparent;" disabled>
+        🔒 오늘 목표 50% 달성 시 잠금 해제
+      </button>
+    </div>
   </div>
 </div>
 
@@ -1722,6 +1734,8 @@ function renderCommentPanel() {
   btn.disabled = false;
   btn.onclick = () => requireApiKey(generateComment);
 
+  renderTriviaSection();
+
   const inner = document.querySelector('.comment-inner');
   if (!document.getElementById('apikeyResetRow')) {
     const resetRow = document.createElement('div');
@@ -2075,7 +2089,115 @@ async function generateComment() {
   btn.disabled = false; btn.textContent = '✦ 다시 받기';
 }
 
-// ── 블록 확대 팝업 ──
+// ── 오늘의 발견 (보상 Trivia) ──
+const TRIVIA_TOPICS = {
+  a1: { name: '인성/품격', prompt: '인간관계, 공감, 배려, 품격에 관한 흥미로운 심리학적 사실이나 연구 결과' },
+  a2: { name: '자기관리/루틴', prompt: '습관 형성, 생산성, 수면, 루틴에 관한 흥미로운 과학적 사실이나 연구 결과' },
+  a3: { name: '독서/지식', prompt: '독서, 학습, 뇌과학, 언어, 지식에 관한 흥미로운 사실이나 연구 결과' },
+  a4: { name: '체력/건강', prompt: '운동, 영양, 신체, 건강에 관한 흥미롭고 잘 알려지지 않은 과학적 사실' },
+  a5: { name: '커리어/실력', prompt: '커리어, 학습 과학, 전문성 개발, 문화 산업에 관한 흥미로운 인사이트나 사실' },
+  a6: { name: '경제력/재정', prompt: '투자, 경제 심리학, 돈, 복리에 관한 흥미롭고 잘 알려지지 않은 사실' },
+  a7: { name: '철학/가치관', prompt: '철학, 가치관, 인생관, 세계적 사상가들에 관한 흥미로운 이야기나 통찰' },
+  a8: { name: '창의성/예술', prompt: '음악, 영화, 예술, 창의성, 문화에 관한 흥미로운 비하인드 스토리나 사실' },
+};
+
+function getTriviaAreaId() {
+  const areaIds = Object.keys(TRIVIA_TOPICS);
+  // 오늘 날짜 기반 시드로 "오늘의 영역" 결정 (매일 달라짐)
+  const seed = parseInt(getToday().replace(/-/g, '')) % areaIds.length;
+  return areaIds[seed];
+}
+
+function renderTriviaSection() {
+  const { pct } = getTodayRate();
+  const unlocked = pct >= 50;
+  const btn = document.getElementById('triviaBtn');
+  const triviaBox = document.getElementById('triviaBox');
+  const lockLabel = document.getElementById('triviaLockLabel');
+  if (!btn) return;
+
+  // 오늘 캐시 확인
+  let cached = null;
+  try { cached = JSON.parse(localStorage.getItem('mandart_trivia_cache')); } catch(e) {}
+  const hasCached = cached && cached.date === getToday() && cached.text;
+
+  const areaId = getTriviaAreaId();
+  const topic = TRIVIA_TOPICS[areaId];
+  lockLabel.textContent = `today · ${topic.name}`;
+
+  if (hasCached) {
+    triviaBox.style.display = 'block';
+    triviaBox.textContent = cached.text;
+    btn.style.display = 'none';
+    return;
+  }
+
+  triviaBox.style.display = 'none';
+
+  if (unlocked) {
+    btn.disabled = false;
+    btn.style.cssText = 'width:100%;padding:13px;border-radius:6px;border:1px solid #2a2a30;background:#0f0f10;color:#c8a860;font-family:\'IBM Plex Sans KR\',sans-serif;font-size:12px;font-weight:500;cursor:pointer;transition:all 0.2s;-webkit-tap-highlight-color:transparent;';
+    btn.textContent = '✦ 오늘의 발견 열기';
+    btn.onclick = () => requireApiKey(generateTrivia);
+  } else {
+    btn.disabled = true;
+    btn.style.cssText = 'width:100%;padding:13px;border-radius:6px;border:1px dashed #1e1e20;background:transparent;color:#383840;font-family:\'IBM Plex Sans KR\',sans-serif;font-size:12px;font-weight:500;cursor:not-allowed;transition:all 0.2s;';
+    btn.textContent = `🔒 오늘 목표 ${pct}% / 50% 달성 시 잠금 해제`;
+  }
+}
+
+async function generateTrivia() {
+  const btn = document.getElementById('triviaBtn');
+  const triviaBox = document.getElementById('triviaBox');
+  if (!btn || !triviaBox) return;
+
+  btn.disabled = true;
+  btn.textContent = '발견하는 중...';
+
+  const areaId = getTriviaAreaId();
+  const topic = TRIVIA_TOPICS[areaId];
+
+  try {
+    const prompt = `${topic.prompt}를 알려줘.
+조건:
+- 진짜 흥미롭고 잘 알려지지 않은 사실이어야 함
+- 2~3문장으로 짧고 임팩트 있게
+- "오늘의 발견:" 같은 접두어 없이 바로 내용만
+- 한국어로, 이모지 없이
+- 출처가 있다면 끝에 간략히 (예: — 하버드 연구, 2019)`;
+
+    const res = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': getApiKey(),
+        'anthropic-version': '2023-06-01',
+        'anthropic-dangerous-direct-browser-access': 'true'
+      },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 300,
+        messages: [{ role: 'user', content: prompt }]
+      })
+    });
+    const data = await res.json();
+    if (!res.ok) {
+      btn.disabled = false;
+      btn.textContent = '✦ 오늘의 발견 열기';
+      return;
+    }
+    const text = data.content?.[0]?.text || '';
+    if (!text) return;
+
+    localStorage.setItem('mandart_trivia_cache', JSON.stringify({ date: getToday(), text, areaId }));
+    triviaBox.textContent = text;
+    triviaBox.style.display = 'block';
+    btn.style.display = 'none';
+  } catch(e) {
+    btn.disabled = false;
+    btn.textContent = '✦ 오늘의 발견 열기';
+  }
+}
 const blockOverlay = document.getElementById('blockOverlay');
 const blockGridEl = document.getElementById('blockGrid');
 const blockPopupTitle = document.getElementById('blockPopupTitle');
