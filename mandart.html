@@ -660,6 +660,8 @@
         🔒 오늘 목표 50% 달성 시 잠금 해제
       </button>
     </div>
+    <!-- 칭호 수집 -->
+    <div id="titleSection" style="display:flex;flex-direction:column;gap:8px;"></div>
   </div>
 </div>
 
@@ -1735,6 +1737,7 @@ function renderCommentPanel() {
   btn.onclick = () => requireApiKey(generateComment);
 
   renderTriviaSection();
+  renderTitleSection();
 
   const inner = document.querySelector('.comment-inner');
   if (!document.getElementById('apikeyResetRow')) {
@@ -2256,6 +2259,133 @@ async function generateTrivia2() {
     btn2.style.display = 'none';
   } catch(e) { btn2.disabled = false; btn2.textContent = '✦ 보너스 발견 열기  (80% 달성!)'; }
 }
+// ── 칭호 수집 ──
+let titleCollection = [];
+try { titleCollection = JSON.parse(localStorage.getItem('mandart_titles')) || []; } catch(e) {}
+function saveTitles() { localStorage.setItem('mandart_titles', JSON.stringify(titleCollection)); }
+
+function renderTitleSection() {
+  const { pct } = getTodayRate();
+  const unlocked90 = pct >= 90;
+  const section = document.getElementById('titleSection');
+  if (!section) return;
+  section.innerHTML = '';
+
+  let cachedTitle = null;
+  try { cachedTitle = JSON.parse(localStorage.getItem('mandart_title_today')); } catch(e) {}
+  const hasTodayTitle = cachedTitle && cachedTitle.date === getToday();
+
+  const header = document.createElement('div');
+  header.style.cssText = 'display:flex;align-items:center;justify-content:space-between;';
+  header.innerHTML = `
+    <div class="comment-section-label" style="margin-bottom:0">오늘의 칭호</div>
+    <span id="titleCollectionBtn" style="font-size:9px;color:#505054;font-family:'IBM Plex Mono',monospace;cursor:pointer;text-decoration:underline;">${titleCollection.length}개 모음</span>`;
+  section.appendChild(header);
+
+  if (hasTodayTitle) {
+    const box = document.createElement('div');
+    box.style.cssText = 'background:linear-gradient(135deg,#1a1610,#0f0f10);border:1px solid #c8a860;border-radius:10px;padding:18px 20px;text-align:center;';
+    box.innerHTML = `
+      <div style="font-size:9px;color:#c8a860;font-family:'IBM Plex Mono',monospace;letter-spacing:2px;margin-bottom:8px;">TODAY'S TITLE</div>
+      <div style="font-size:18px;font-weight:700;color:#e8e8e8;letter-spacing:-0.5px;">${cachedTitle.title}</div>
+      ${cachedTitle.reason ? `<div style="font-size:11px;color:#686874;margin-top:6px;line-height:1.5;">${cachedTitle.reason}</div>` : ''}`;
+    section.appendChild(box);
+    header.querySelector('#titleCollectionBtn').onclick = () => showTitleCollection();
+    return;
+  }
+
+  const btn = document.createElement('button');
+  btn.id = 'titleBtn';
+  if (unlocked90) {
+    btn.disabled = false;
+    btn.style.cssText = "width:100%;padding:13px;border-radius:6px;border:1px solid #c8a860;background:rgba(200,168,96,0.08);color:#c8a860;font-family:'IBM Plex Sans KR',sans-serif;font-size:12px;font-weight:600;cursor:pointer;transition:all 0.2s;letter-spacing:-0.3px;-webkit-tap-highlight-color:transparent;";
+    btn.textContent = '✦ 오늘의 칭호 받기  (90% 달성!)';
+    btn.onclick = () => requireApiKey(generateTitle);
+  } else {
+    btn.disabled = true;
+    btn.style.cssText = "width:100%;padding:13px;border-radius:6px;border:1px dashed #1e1e20;background:transparent;color:#2a2a2a;font-family:'IBM Plex Sans KR',sans-serif;font-size:12px;font-weight:500;cursor:not-allowed;";
+    btn.textContent = `🏆 칭호  (${pct}% / 90% 달성 시)`;
+  }
+  section.appendChild(btn);
+  header.querySelector('#titleCollectionBtn').onclick = () => showTitleCollection();
+}
+
+async function generateTitle() {
+  const btn = document.getElementById('titleBtn');
+  if (btn) { btn.disabled = true; btn.textContent = '칭호 각인 중...'; }
+
+  const checkedItems = [];
+  for (let r=0;r<9;r++) for (let c=0;c<9;c++) {
+    const cell = grid[r][c];
+    if (!cell || cell.cls.includes('area-header') || cell.cls.includes('center-goal') || cell.cls.includes('center-block')) continue;
+    const key = getCellKey(r,c), cycleDays = getEffectiveCycleDays(cell.text, cell.areaIdx, cell.itemIdx);
+    if (isClickedToday(key, cycleDays)) checkedItems.push(cell.text.replace(/\n/g,' '));
+  }
+
+  try {
+    const prompt = `오늘 이 사람이 달성한 항목들이야: ${checkedItems.join(', ')}
+
+이 사람에게 오늘 하루에 어울리는 칭호를 딱 하나 만들어줘.
+조건:
+- 칭호는 4~10자 내외의 한국어
+- 멋있고 기억에 남는 느낌 (예: "새벽을 깨운 자", "철벽 루틴러", "균형의 수호자")
+- 오늘 한 것들의 특징이 반영될 것
+- 이모지 없이
+- JSON으로만 응답: {"title": "칭호", "reason": "한 줄 설명 (20자 이내)"}`;
+
+    const res = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-api-key': getApiKey(), 'anthropic-version': '2023-06-01', 'anthropic-dangerous-direct-browser-access': 'true' },
+      body: JSON.stringify({ model: 'claude-sonnet-4-20250514', max_tokens: 100, messages: [{ role: 'user', content: prompt }] })
+    });
+    const data = await res.json();
+    if (!res.ok) { if (btn) { btn.disabled = false; btn.textContent = '✦ 오늘의 칭호 받기  (90% 달성!)'; } return; }
+    const raw = data.content?.[0]?.text || '';
+    let parsed;
+    try { parsed = JSON.parse(raw.replace(/```json|```/g,'').trim()); } catch(e) { parsed = { title: raw.slice(0,20), reason: '' }; }
+
+    const todayData = { date: getToday(), ...parsed };
+    localStorage.setItem('mandart_title_today', JSON.stringify(todayData));
+    if (!titleCollection.find(t => t.date === getToday())) {
+      titleCollection.unshift(todayData);
+      saveTitles();
+    }
+    renderTitleSection();
+  } catch(e) { if (btn) { btn.disabled = false; btn.textContent = '✦ 오늘의 칭호 받기  (90% 달성!)'; } }
+}
+
+function showTitleCollection() {
+  document.getElementById('titleCollectionOverlay')?.remove();
+  const overlay = document.createElement('div');
+  overlay.id = 'titleCollectionOverlay';
+  overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.8);z-index:600;display:flex;align-items:flex-end;justify-content:center;backdrop-filter:blur(8px);';
+  const popup = document.createElement('div');
+  popup.style.cssText = 'background:#111112;border:1px solid #1e1e20;border-radius:14px 14px 0 0;width:100%;max-width:480px;padding:20px 20px 36px;max-height:70vh;overflow-y:auto;';
+  popup.innerHTML = `
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;">
+      <div>
+        <div style="font-size:16px;font-weight:700;color:#e8e8e8;letter-spacing:-0.5px;">칭호 모음</div>
+        <div style="font-size:10px;color:#505054;font-family:'IBM Plex Mono',monospace;margin-top:2px;">${titleCollection.length}개 획득</div>
+      </div>
+      <button id="titleColClose" style="border:none;background:#1e1e20;color:#888;width:30px;height:30px;border-radius:50%;font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;">×</button>
+    </div>
+    ${titleCollection.length === 0
+      ? '<div style="text-align:center;color:#505054;font-size:12px;padding:32px 0;">아직 획득한 칭호가 없어요<br><span style="font-size:10px;color:#383840">90% 달성 시 칭호가 쌓여요</span></div>'
+      : titleCollection.map(t => `
+        <div style="background:#0f0f10;border:1px solid #1e1e20;border-radius:8px;padding:12px 14px;margin-bottom:6px;">
+          <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;">
+            <span style="font-size:14px;font-weight:700;color:#e8e8e8;">${t.title}</span>
+            <span style="font-size:9px;color:#383840;font-family:'IBM Plex Mono',monospace;flex-shrink:0;">${t.date}</span>
+          </div>
+          ${t.reason ? `<div style="font-size:11px;color:#505054;margin-top:4px;">${t.reason}</div>` : ''}
+        </div>`).join('')
+    }`;
+  overlay.appendChild(popup);
+  document.body.appendChild(overlay);
+  overlay.addEventListener('click', e => { if (e.target === overlay) overlay.remove(); });
+  popup.querySelector('#titleColClose').onclick = () => overlay.remove();
+}
+
 const blockOverlay = document.getElementById('blockOverlay');
 const blockGridEl = document.getElementById('blockGrid');
 const blockPopupTitle = document.getElementById('blockPopupTitle');
