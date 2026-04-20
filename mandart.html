@@ -277,9 +277,15 @@
     -webkit-tap-highlight-color: transparent; transition: background 0.1s;
   }
   .cal-day:hover { background: #2a2a2a; color: #e8e8e8; }
-  .cal-day.today { color: #d4a853; font-weight: 600; }
+  .cal-day.today { 
+    color: #e8e8e8; font-weight: 700;
+    background: #2a2a2a;
+    outline: 1.5px solid rgba(255,255,255,0.6);
+    border-radius: 6px;
+  }
   .cal-day.selected { background: #2a2a2a; color: #e8e8e8; outline: 1.5px solid rgba(255,255,255,0.6); border-radius: 6px; }
   .cal-day.checked { background: #1a2a1a; color: #00c870; }
+  .cal-day.today.checked { background: #1a2a1a; color: #00c870; outline: 1.5px solid #00c870; }
   .cal-day.empty { cursor: default; }
   .cal-close { border: none; background: transparent; color: #505054; font-size: 20px; cursor: pointer; }
 
@@ -369,6 +375,7 @@
     font-size: 14px; font-weight: 400; line-height: 1.8;
     color: #e8e8e8; min-height: 80px;
     white-space: pre-wrap; letter-spacing: -0.2px;
+    -webkit-user-select: text; user-select: text;
   }
   .comment-box.loading { color: #505054; font-size: 12px; font-family: 'IBM Plex Mono', monospace; }
   .comment-checked-list { display: flex; flex-wrap: wrap; gap: 6px; }
@@ -1017,7 +1024,10 @@ function renderCal() {
     const el = document.createElement('div');
     el.className = 'cal-day';
     el.textContent = d;
-    if (dateStr === todayStr) el.classList.add('today');
+    if (dateStr === todayStr) {
+      el.classList.add('today');
+      el.innerHTML = `<div style="line-height:1.2">${d}</div><div style="font-size:7px;opacity:0.7;letter-spacing:0.5px">오늘</div>`;
+    }
     if (calCheckedDates.has(dateStr)) el.classList.add('checked');
 
     el.addEventListener('click', () => {
@@ -2081,7 +2091,7 @@ async function generateComment() {
     const res = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'x-api-key': getApiKey(), 'anthropic-version': '2023-06-01', 'anthropic-dangerous-direct-browser-access': 'true' },
-      body: JSON.stringify({ model: 'claude-sonnet-4-20250514', max_tokens: 1000, messages: [{ role: 'user', content: prompt }] })
+      body: JSON.stringify({ model: 'claude-sonnet-4-20250514', max_tokens: 400, messages: [{ role: 'user', content: prompt }] })
     });
     const data = await res.json();
     if (!res.ok) { box.className = 'comment-box loading'; box.textContent = `오류 ${res.status}: ${data.error?.message || JSON.stringify(data)}`; btn.disabled = false; btn.textContent = '✦ 다시 받기'; return; }
@@ -2209,7 +2219,7 @@ async function generateTrivia() {
     const res = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'x-api-key': getApiKey(), 'anthropic-version': '2023-06-01', 'anthropic-dangerous-direct-browser-access': 'true' },
-      body: JSON.stringify({ model: 'claude-sonnet-4-20250514', max_tokens: 500, messages: [{ role: 'user', content: prompt }] })
+      body: JSON.stringify({ model: 'claude-sonnet-4-20250514', max_tokens: 800, messages: [{ role: 'user', content: prompt }] })
     });
     const data = await res.json();
     if (!res.ok) { btn.disabled = false; btn.textContent = '✦ 오늘의 발견 열기'; return; }
@@ -2247,7 +2257,7 @@ async function generateTrivia2() {
     const res = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'x-api-key': getApiKey(), 'anthropic-version': '2023-06-01', 'anthropic-dangerous-direct-browser-access': 'true' },
-      body: JSON.stringify({ model: 'claude-sonnet-4-20250514', max_tokens: 500, messages: [{ role: 'user', content: prompt }] })
+      body: JSON.stringify({ model: 'claude-sonnet-4-20250514', max_tokens: 800, messages: [{ role: 'user', content: prompt }] })
     });
     const data = await res.json();
     if (!res.ok) { btn2.disabled = false; btn2.textContent = '✦ 보너스 발견 열기  (80% 달성!)'; return; }
