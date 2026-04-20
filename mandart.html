@@ -726,7 +726,8 @@
     <div class="modal-title" id="modalTitle">기록 남기기</div>
     <div class="modal-cell-name" id="modalCellName"></div>
     <label>날짜</label>
-    <input type="date" id="modalDate">
+    <input type="hidden" id="modalDate">
+    <button id="modalDateBtn" style="width:100%;background:#0f0f10;border:1px solid #1e1e20;border-radius:4px;color:#e8e8e8;font-family:'IBM Plex Mono',monospace;font-size:12px;padding:10px 12px;outline:none;box-sizing:border-box;cursor:pointer;text-align:left;transition:border-color 0.15s;" onclick="openModalCalendar()"></button>
     <label>메모 <span style="color:#303034">(선택)</span></label>
     <textarea id="modalComment" placeholder="예) 완독. 생각보다 어렵지 않았다."></textarea>
     <div class="modal-btns">
@@ -941,6 +942,41 @@ const modalComment = document.getElementById('modalComment');
 const modalCellName = document.getElementById('modalCellName');
 const modalTitle = document.getElementById('modalTitle');
 
+function setModalDate(dateStr) {
+  modalDate.value = dateStr;
+  const btn = document.getElementById('modalDateBtn');
+  if (!btn) return;
+  const isToday = dateStr === getToday();
+  btn.textContent = isToday ? `${dateStr}  (오늘)` : `${dateStr}  ✎ 날짜 변경`;
+  btn.style.color = isToday ? '#e8e8e8' : '#c8a860';
+}
+
+function openModalCalendar() {
+  const prevCallback = modalCallback;
+  const prevCellName = modalCellName.textContent;
+  const prevComment = modalComment.value;
+  modalOverlay.classList.remove('open');
+  // calCheckedDates 비워서 과거 체크 표시 없이 순수 날짜 선택용으로 열기
+  calCheckedDates = new Set();
+  calYear = new Date().getFullYear();
+  calMonth = new Date().getMonth();
+  calCellText = prevCellName;
+  calAreaId = '';
+  calCallback = (dateStr) => {
+    // 달력 닫히고 모달 다시 열기
+    modalCallback = prevCallback;
+    modalCellName.textContent = prevCellName;
+    modalComment.value = prevComment;
+    document.getElementById('modalSkip').style.display = prevCallback ? '' : 'none';
+    setModalDate(dateStr);
+    modalOverlay.classList.add('open');
+    setTimeout(() => modalComment.focus(), 100);
+  };
+  document.getElementById('calCellName').textContent = prevCellName;
+  renderCal();
+  calOverlay.classList.add('open');
+}
+
 function closeModal() { modalOverlay.classList.remove('open'); editingLogIdx = null; modalCallback = null; }
 
 document.getElementById('modalCancel').addEventListener('click', closeModal);
@@ -948,7 +984,6 @@ document.getElementById('modalConfirm').addEventListener('click', () => {
   if (modalCallback) modalCallback(modalDate.value, modalComment.value.trim());
   closeModal();
 });
-// ── 메모 없이 체크 버튼 ──
 document.getElementById('modalSkip').addEventListener('click', () => {
   if (modalCallback) modalCallback(modalDate.value, '');
   closeModal();
@@ -958,9 +993,8 @@ modalOverlay.addEventListener('click', (e) => { if (e.target === modalOverlay) c
 function openModal(cellText, areaId, onSave, prefillDate, prefillComment, isEdit) {
   modalTitle.textContent = isEdit ? '기록 수정' : '기록 남기기';
   modalCellName.textContent = cellText.replace(/\n/g, ' ');
-  modalDate.value = prefillDate || getToday();
+  setModalDate(prefillDate || getToday());
   modalComment.value = prefillComment || '';
-  // 수정 모드일 땐 건너뛰기 숨김 (이미 저장된 항목이므로)
   document.getElementById('modalSkip').style.display = isEdit ? 'none' : '';
   modalCallback = (date, comment) => onSave(date, comment);
   modalOverlay.classList.add('open');
@@ -1032,9 +1066,14 @@ function renderCal() {
 
     el.addEventListener('click', () => {
       calOverlay.classList.remove('open');
-      openModal(calCellText, calAreaId, (date, comment) => {
-        calCallback(dateStr, comment);
-      }, dateStr, '', false);
+      if (calCallback && calCallback.length === 1) {
+        // openModalCalendar에서 온 경우 - 날짜만 반환
+        calCallback(dateStr);
+      } else {
+        openModal(calCellText, calAreaId, (date, comment) => {
+          calCallback(dateStr, comment);
+        }, dateStr, '', false);
+      }
     });
     calGrid.appendChild(el);
   }
@@ -1200,7 +1239,7 @@ for (let r = 0; r < 9; r++) {
 
         if (loggable) {
           tapTimer = setTimeout(() => {
-            openCalendar(cell.text, areaId, key, (date, comment) => {
+            openModal(cell.text, areaId, (date, comment) => {
               if (isClickable(key, cycleDays)) {
                 clickData[key] = { count: (clickData[key]?.count||0)+1, lastDate: date };
                 saveClicks(); applyBrightness(div, key); applyBorder(div, key, cycleDays);
@@ -1212,7 +1251,7 @@ for (let r = 0; r < 9; r++) {
               }
               if (activeFilter !== 'all' && activeFilter !== areaId) activeFilter = 'all';
               renderLogs();
-            });
+            }, getToday(), '', false);
           }, 300);
           return;
         }
@@ -1228,14 +1267,14 @@ for (let r = 0; r < 9; r++) {
       div.addEventListener('contextmenu', (e) => {
         e.preventDefault();
         if (loggable) {
-          openCalendar(cell.text, areaId, key, (date, comment) => {
+          openModal(cell.text, areaId, (date, comment) => {
             if (isClickable(key, cycleDays)) {
               clickData[key] = { count: (clickData[key]?.count||0)+1, lastDate: date };
               saveClicks(); applyBrightness(div, key); applyBorder(div, key, cycleDays);
             }
             if (comment) { logData.push({ key, cellText: cell.text, areaId, date, comment }); saveLogs(); }
             renderLogs();
-          });
+          }, getToday(), '', false);
         }
       });
     }
@@ -2477,7 +2516,7 @@ function openBlockPopup(areaIdx) {
         lastTapBlock = now;
 
         if (loggable) {
-          openCalendar(itemText, area.id, key, (date, comment) => {
+          openModal(itemText, area.id, (date, comment) => {
             if (isClickable(key, cycleDays)) {
               clickData[key] = { count: (clickData[key]?.count||0)+1, lastDate: date };
               saveClicks(); applyState(); applyBrightness(cellEls[r][c], key); applyBorder(cellEls[r][c], key, cycleDays);
@@ -2485,7 +2524,7 @@ function openBlockPopup(areaIdx) {
             }
             if (comment) { logData.push({ key, cellText: itemText, areaId: area.id, date, comment }); saveLogs(); }
             renderLogs();
-          });
+          }, getToday(), '', false);
           return;
         }
 
@@ -2499,14 +2538,14 @@ function openBlockPopup(areaIdx) {
       cell.addEventListener('contextmenu', (e) => {
         e.preventDefault();
         if (loggable) {
-          openCalendar(itemText, area.id, key, (date, comment) => {
+          openModal(itemText, area.id, (date, comment) => {
             if (isClickable(key, cycleDays)) {
               clickData[key] = { count: (clickData[key]?.count||0)+1, lastDate: date };
               saveClicks(); applyState(); applyBrightness(cellEls[r][c], key); applyBorder(cellEls[r][c], key, cycleDays);
             }
             if (comment) { logData.push({ key, cellText: itemText, areaId: area.id, date, comment }); saveLogs(); }
             renderLogs();
-          });
+          }, getToday(), '', false);
         }
       });
     }
