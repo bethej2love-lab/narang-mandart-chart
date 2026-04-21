@@ -610,9 +610,10 @@
         <div style="font-size:10px;color:#787884;margin-top:4px" id="statTodayDetail"></div>
       </div>
     </div>
-    <!-- 이번 주 약점 -->
+    <!-- 아이템 슬롯 -->
+    <div id="itemSlotRow" style="display:flex;gap:8px;align-items:center;"></div>
     <div id="weakSection">
-      <div class="comment-section-label">이번 주 약점 <span id="weakPeriodLabel" style="color:#505054;font-size:9px"></span></div>
+      <div class="comment-section-label">최근 7일 약점 <span id="weakPeriodLabel" style="color:#505054;font-size:9px"></span></div>
       <div id="weakList" style="display:flex;flex-direction:column;gap:6px;"></div>
     </div>
 
@@ -1586,12 +1587,22 @@ function calcStreak() {
   let streak = 0;
   const todayStr = getToday();
   const todayDone = isStreakDay(todayStr);
+  const shieldDays = getEquippedShieldDays();
+  let shieldLeft = shieldDays;
   const d = new Date(todayStr + 'T00:00:00');
   if (!todayDone) d.setDate(d.getDate() - 1);
   while (true) {
     const ds = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
-    if (isStreakDay(ds)) { streak++; d.setDate(d.getDate() - 1); }
-    else break;
+    if (isStreakDay(ds)) {
+      streak++;
+      d.setDate(d.getDate() - 1);
+    } else if (shieldLeft > 0) {
+      // 방패로 빈 날 보호
+      shieldLeft--;
+      d.setDate(d.getDate() - 1);
+    } else {
+      break;
+    }
     if (streak > 365) break;
   }
   return streak;
@@ -1699,11 +1710,6 @@ function renderCheckedList(elId, period) {
 // ── 약점 분석 ──
 function getWeakItems(topN = 5) {
   const today = new Date(getToday() + 'T00:00:00');
-  const past7 = [];
-  for (let i = 0; i < 7; i++) {
-    const d = new Date(today); d.setDate(today.getDate() - i);
-    past7.push(`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`);
-  }
   const results = [];
   for (let r = 0; r < 9; r++) {
     for (let c = 0; c < 9; c++) {
@@ -1712,12 +1718,12 @@ function getWeakItems(topN = 5) {
       if (getEffectiveCycleDays(cell.text, cell.areaIdx, cell.itemIdx) !== 1) continue;
       const key = getCellKey(r, c);
       const last = clickData[key]?.lastDate;
-      // 최근 7일 중 체크된 날 수 (lastDate가 past7 안에 있으면 1일로 카운트)
-      const checkedDays = last && past7.includes(last) ? 1 : 0;
-      // 전체 count를 7일 기준으로 근사 (최대 7)
-      const totalCount = clickData[key]?.count || 0;
-      const approxDays = Math.min(totalCount, 7);
-      const pct = Math.round(approxDays / 7 * 100);
+      let pct = 0;
+      if (last) {
+        const diff = Math.round((today - new Date(last + 'T00:00:00')) / 86400000);
+        // 오늘=100%, 1일전=86%, ... 6일전=14%, 7일이상=0%
+        pct = diff <= 6 ? Math.round((7 - diff) / 7 * 100) : 0;
+      }
       results.push({ label: cell.text.replace(/\n/g, ' '), pct, checkedToday: isClickedToday(key, 1), areaId: cell.cls.split(' ')[0] });
     }
   }
@@ -1787,6 +1793,7 @@ function renderCommentPanel() {
 
   renderTriviaSection();
   renderTitleSection();
+  renderItemSlots();
 
   const inner = document.querySelector('.comment-inner');
   if (!document.getElementById('apikeyResetRow')) {
@@ -2268,8 +2275,183 @@ async function generateTrivia() {
     triviaBox.textContent = text;
     triviaBox.style.display = 'block';
     btn.style.display = 'none';
+    // 아이템 드롭 시도
+    const droppedItem = tryDropItem();
+    if (droppedItem) {
+      const info = ITEM_TYPES[droppedItem.type];
+      const dropMsg = document.createElement('div');
+      dropMsg.style.cssText = 'margin-top:10px;padding:10px 14px;background:rgba(200,168,96,0.08);border:1px solid rgba(200,168,96,0.3);border-radius:8px;font-size:11px;color:#c8a860;text-align:center;';
+      dropMsg.textContent = `${info.emoji} 아이템 획득! ${info.name} — ${info.desc}`;
+      triviaBox.insertAdjacentElement('afterend', dropMsg);
+      renderItemSlots();
+    }
     renderTriviaSection(); // 보너스 버튼 표시
   } catch(e) { btn.disabled = false; btn.textContent = '✦ 오늘의 발견 열기'; }
+}
+
+// ── 아이템 시스템 ──
+const ITEM_TYPES = {
+  shield_1: { name: '하루 방패', emoji: '🛡', desc: '스트릭이 하루 끊겨도 유지', days: 1 },
+  shield_2: { name: '이틀 방패', emoji: '⚔', desc: '스트릭이 이틀까지 끊겨도 유지', days: 2 },
+};
+let itemInventory = [];
+let equippedItems = []; // 최대 2개 item id
+try { itemInventory = JSON.parse(localStorage.getItem('mandart_item_inventory')) || []; } catch(e) {}
+try { equippedItems = JSON.parse(localStorage.getItem('mandart_equipped_items')) || []; } catch(e) {}
+function saveItems() {
+  localStorage.setItem('mandart_item_inventory', JSON.stringify(itemInventory));
+  localStorage.setItem('mandart_equipped_items', JSON.stringify(equippedItems));
+}
+
+function itemGenId() { return 'item_' + Date.now().toString(36) + Math.random().toString(36).slice(2,4); }
+
+function tryDropItem() {
+  // 40% 확률로 아이템 드롭
+  if (Math.random() > 0.4) return null;
+  const type = Math.random() < 0.65 ? 'shield_1' : 'shield_2';
+  const item = { id: itemGenId(), type, acquiredDate: getToday() };
+  itemInventory.push(item);
+  saveItems();
+  return item;
+}
+
+function equipItem(id) {
+  if (equippedItems.includes(id)) return;
+  if (equippedItems.length >= 2) return; // 슬롯 꽉 참
+  equippedItems.push(id);
+  saveItems();
+  renderItemSlots();
+}
+
+function unequipItem(id) {
+  equippedItems = equippedItems.filter(i => i !== id);
+  saveItems();
+  renderItemSlots();
+}
+
+function deleteItem(id) {
+  itemInventory = itemInventory.filter(i => i.id !== id);
+  equippedItems = equippedItems.filter(i => i !== id);
+  saveItems();
+  renderItemSlots();
+}
+
+function getEquippedShieldDays() {
+  return equippedItems.reduce((sum, id) => {
+    const item = itemInventory.find(i => i.id === id);
+    return sum + (item ? ITEM_TYPES[item.type]?.days || 0 : 0);
+  }, 0);
+}
+
+function renderItemSlots() {
+  const row = document.getElementById('itemSlotRow');
+  if (!row) return;
+  row.innerHTML = '';
+
+  const shieldDays = getEquippedShieldDays();
+  const inventoryCount = itemInventory.length;
+
+  // 슬롯 2개
+  for (let i = 0; i < 2; i++) {
+    const slot = document.createElement('div');
+    const equippedId = equippedItems[i];
+    const item = equippedId ? itemInventory.find(it => it.id === equippedId) : null;
+    slot.style.cssText = 'position:relative;width:40px;height:40px;border-radius:8px;border:1px solid ' + (item ? '#c8a860' : '#1e1e20') + ';background:' + (item ? 'rgba(200,168,96,0.08)' : '#0f0f10') + ';display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;transition:all 0.15s;';
+    if (item) {
+      const info = ITEM_TYPES[item.type];
+      slot.innerHTML = `<span style="font-size:18px" title="${info.name}: ${info.desc}">${info.emoji}</span>`;
+      slot.title = `${info.name} 장착 중 (탭하면 해제)`;
+      slot.onclick = () => {
+        unequipItem(equippedId);
+      };
+    } else {
+      slot.innerHTML = `<span style="font-size:14px;color:#2a2a30">+</span>`;
+      slot.title = '아이템 장착';
+      slot.onclick = () => showItemInventory();
+    }
+    row.appendChild(slot);
+  }
+
+  // 안내 텍스트
+  const info = document.createElement('div');
+  info.style.cssText = 'flex:1;';
+  if (shieldDays > 0) {
+    info.innerHTML = `<div style="font-size:10px;color:#c8a860;font-family:'IBM Plex Mono',monospace;">방패 ${shieldDays}일 보호 중</div><div style="font-size:9px;color:#505054;margin-top:2px;">스트릭이 ${shieldDays}일 끊겨도 유지돼요</div>`;
+  } else {
+    info.innerHTML = `<div style="font-size:10px;color:#383840;font-family:'IBM Plex Mono',monospace;">장착된 아이템 없음</div><div style="font-size:9px;color:#2a2a2a;margin-top:2px;">오늘의 발견에서 획득할 수 있어요</div>`;
+  }
+  row.appendChild(info);
+
+  // 인벤토리 버튼
+  if (inventoryCount > 0) {
+    const invBtn = document.createElement('button');
+    invBtn.style.cssText = "font-size:9px;color:#505054;background:transparent;border:1px solid #1e1e20;border-radius:6px;padding:4px 8px;cursor:pointer;font-family:'IBM Plex Mono',monospace;flex-shrink:0;";
+    invBtn.textContent = `보유 ${inventoryCount}`;
+    invBtn.onclick = () => showItemInventory();
+    row.appendChild(invBtn);
+  }
+}
+
+function showItemInventory() {
+  document.getElementById('itemInventoryOverlay')?.remove();
+  const overlay = document.createElement('div');
+  overlay.id = 'itemInventoryOverlay';
+  overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.8);z-index:600;display:flex;align-items:flex-end;justify-content:center;backdrop-filter:blur(8px);';
+  const popup = document.createElement('div');
+  popup.style.cssText = 'background:#111112;border:1px solid #1e1e20;border-radius:14px 14px 0 0;width:100%;max-width:480px;padding:20px 20px 36px;max-height:70vh;overflow-y:auto;';
+
+  const unequippedItems = itemInventory.filter(i => !equippedItems.includes(i.id));
+  const canEquipMore = equippedItems.length < 2;
+
+  popup.innerHTML = `
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;">
+      <div>
+        <div style="font-size:16px;font-weight:700;color:#e8e8e8;letter-spacing:-0.5px;">아이템 인벤토리</div>
+        <div style="font-size:10px;color:#505054;font-family:'IBM Plex Mono',monospace;margin-top:2px;">보유 ${itemInventory.length}개 · 장착 ${equippedItems.length}/2</div>
+      </div>
+      <button id="itemInvClose" style="border:none;background:#1e1e20;color:#888;width:30px;height:30px;border-radius:50%;font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;">×</button>
+    </div>
+    ${itemInventory.length === 0
+      ? '<div style="text-align:center;color:#505054;font-size:12px;padding:32px 0;">보유한 아이템이 없어요<br><span style="font-size:10px;color:#383840">오늘의 발견을 열면 아이템을 얻을 수 있어요</span></div>'
+      : itemInventory.map(item => {
+          const info = ITEM_TYPES[item.type];
+          const isEquipped = equippedItems.includes(item.id);
+          return `<div data-itemid="${item.id}" style="background:#0f0f10;border:1px solid ${isEquipped?'#c8a860':'#1e1e20'};border-radius:8px;padding:12px 14px;margin-bottom:6px;display:flex;align-items:center;gap:12px;">
+            <span style="font-size:22px">${info.emoji}</span>
+            <div style="flex:1;">
+              <div style="font-size:13px;font-weight:600;color:#e8e8e8;">${info.name}</div>
+              <div style="font-size:10px;color:#505054;margin-top:2px;">${info.desc}</div>
+              <div style="font-size:9px;color:#383840;margin-top:2px;font-family:'IBM Plex Mono',monospace;">${item.acquiredDate}</div>
+            </div>
+            <div style="display:flex;gap:6px;flex-shrink:0;">
+              ${isEquipped
+                ? `<button class="item-unequip-btn" data-id="${item.id}" style="padding:5px 10px;border-radius:6px;border:1px solid #c8a860;background:rgba(200,168,96,0.1);color:#c8a860;font-size:10px;cursor:pointer;font-family:'IBM Plex Sans KR',sans-serif;">해제</button>`
+                : canEquipMore
+                  ? `<button class="item-equip-btn" data-id="${item.id}" style="padding:5px 10px;border-radius:6px;border:1px solid #2a2a30;background:#1e1e20;color:#e8e8e8;font-size:10px;cursor:pointer;font-family:'IBM Plex Sans KR',sans-serif;">장착</button>`
+                  : `<span style="font-size:10px;color:#383840;padding:5px 0;">슬롯 꽉참</span>`
+              }
+              <button class="item-delete-btn" data-id="${item.id}" style="padding:5px 8px;border-radius:6px;border:1px solid #2a2a30;background:transparent;color:#505054;font-size:10px;cursor:pointer;">버리기</button>
+            </div>
+          </div>`;
+        }).join('')
+    }`;
+  overlay.appendChild(popup);
+  document.body.appendChild(overlay);
+
+  overlay.addEventListener('click', e => { if (e.target === overlay) overlay.remove(); });
+  popup.querySelector('#itemInvClose').onclick = () => overlay.remove();
+
+  popup.querySelectorAll('.item-equip-btn').forEach(btn => {
+    btn.onclick = () => { equipItem(btn.dataset.id); overlay.remove(); showItemInventory(); };
+  });
+  popup.querySelectorAll('.item-unequip-btn').forEach(btn => {
+    btn.onclick = () => { unequipItem(btn.dataset.id); overlay.remove(); showItemInventory(); };
+  });
+  popup.querySelectorAll('.item-delete-btn').forEach(btn => {
+    btn.onclick = () => {
+      showConfirm('이 아이템을 버릴까요?', () => { deleteItem(btn.dataset.id); overlay.remove(); if (itemInventory.length) showItemInventory(); });
+    };
+  });
 }
 
 async function generateTrivia2() {
