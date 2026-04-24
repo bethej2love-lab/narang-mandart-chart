@@ -665,7 +665,7 @@
       </div>
       <div id="triviaBox" style="display:none;background:#0f0f10;border:1px solid #1e1e20;border-radius:8px;padding:18px 20px;font-size:13px;line-height:1.8;color:#e8e8e8;white-space:pre-wrap;letter-spacing:-0.2px;"></div>
       <button id="triviaBtn" style="width:100%;padding:13px;border-radius:6px;border:1px dashed #2a2a30;background:transparent;color:#383840;font-family:'IBM Plex Sans KR',sans-serif;font-size:12px;font-weight:500;cursor:not-allowed;transition:all 0.2s;-webkit-tap-highlight-color:transparent;" disabled>
-        🔒 오늘 목표 50% 달성 시 잠금 해제
+        🔒 오늘 목표 65% 달성 시 잠금 해제
       </button>
     </div>
     <!-- 칭호 수집 -->
@@ -1588,6 +1588,7 @@ function calcStreak() {
   const todayStr = getToday();
   const todayDone = isStreakDay(todayStr);
   const shieldDays = getEquippedShieldDays();
+  let shieldUsed = 0;
   let shieldLeft = shieldDays;
   const d = new Date(todayStr + 'T00:00:00');
   if (!todayDone) d.setDate(d.getDate() - 1);
@@ -1597,15 +1598,44 @@ function calcStreak() {
       streak++;
       d.setDate(d.getDate() - 1);
     } else if (shieldLeft > 0) {
-      // 방패로 빈 날 보호
       shieldLeft--;
+      shieldUsed++;
       d.setDate(d.getDate() - 1);
     } else {
       break;
     }
     if (streak > 365) break;
   }
+  // 실제로 방패가 쓰였으면 소모
+  if (shieldUsed > 0) consumeShields(shieldUsed);
   return streak;
+}
+
+function consumeShields(daysUsed) {
+  let toConsume = daysUsed;
+  const toRemove = [];
+  for (const id of [...equippedItems]) {
+    if (toConsume <= 0) break;
+    const item = itemInventory.find(i => i.id === id);
+    if (!item) continue;
+    const days = ITEM_TYPES[item.type]?.days || 0;
+    if (days <= toConsume) {
+      toRemove.push(id);
+      toConsume -= days;
+    } else {
+      // 이틀 방패인데 하루만 쓴 경우 → 하루 방패로 교체
+      toRemove.push(id);
+      const downgraded = { id: itemGenId(), type: 'shield_1', acquiredDate: item.acquiredDate };
+      itemInventory.push(downgraded);
+      equippedItems.push(downgraded.id);
+      toConsume = 0;
+    }
+  }
+  if (toRemove.length > 0) {
+    itemInventory = itemInventory.filter(i => !toRemove.includes(i.id));
+    equippedItems = equippedItems.filter(i => !toRemove.includes(i));
+    saveItems();
+  }
 }
 function getRecentStreakDays(n = 14) {
   const result = [], d = new Date(getToday() + 'T00:00:00');
@@ -2169,7 +2199,7 @@ function getTriviaAreaId() {
 
 function renderTriviaSection() {
   const { pct } = getTodayRate();
-  const unlocked50 = pct >= 50;
+  const unlocked65 = pct >= 65;
   const unlocked80 = pct >= 80;
   const btn = document.getElementById('triviaBtn');
   const triviaBox = document.getElementById('triviaBox');
@@ -2195,7 +2225,7 @@ function renderTriviaSection() {
     btn.style.display = 'none';
   } else {
     triviaBox.style.display = 'none';
-    if (unlocked50) {
+    if (unlocked65) {
       btn.disabled = false;
       btn.style.cssText = "width:100%;padding:13px;border-radius:6px;border:1px solid #2a2a30;background:#0f0f10;color:#c8a860;font-family:'IBM Plex Sans KR',sans-serif;font-size:12px;font-weight:500;cursor:pointer;transition:all 0.2s;-webkit-tap-highlight-color:transparent;";
       btn.textContent = '✦ 오늘의 발견 열기';
@@ -2203,7 +2233,7 @@ function renderTriviaSection() {
     } else {
       btn.disabled = true;
       btn.style.cssText = "width:100%;padding:13px;border-radius:6px;border:1px dashed #1e1e20;background:transparent;color:#383840;font-family:'IBM Plex Sans KR',sans-serif;font-size:12px;font-weight:500;cursor:not-allowed;transition:all 0.2s;";
-      btn.textContent = `🔒 오늘 목표 ${pct}% / 50% 달성 시 잠금 해제`;
+      btn.textContent = `🔒 오늘 목표 ${pct}% / 65% 달성 시 잠금 해제`;
     }
   }
 
@@ -2292,9 +2322,10 @@ async function generateTrivia() {
     const droppedItem = tryDropItem();
     if (droppedItem) {
       const info = ITEM_TYPES[droppedItem.type];
+      const isEquipped = equippedItems.includes(droppedItem.id);
       const dropMsg = document.createElement('div');
       dropMsg.style.cssText = 'margin-top:10px;padding:10px 14px;background:rgba(200,168,96,0.08);border:1px solid rgba(200,168,96,0.3);border-radius:8px;font-size:11px;color:#c8a860;text-align:center;';
-      dropMsg.textContent = `${info.emoji} 아이템 획득! ${info.name} — ${info.desc}`;
+      dropMsg.textContent = `${info.emoji} 아이템 획득${isEquipped ? ' · 자동 장착됨' : ' (슬롯 꽉참)'}: ${info.name} — ${info.desc}`;
       triviaBox.insertAdjacentElement('afterend', dropMsg);
       renderItemSlots();
     }
@@ -2319,11 +2350,14 @@ function saveItems() {
 function itemGenId() { return 'item_' + Date.now().toString(36) + Math.random().toString(36).slice(2,4); }
 
 function tryDropItem() {
-  // 40% 확률로 아이템 드롭
   if (Math.random() > 0.4) return null;
   const type = Math.random() < 0.65 ? 'shield_1' : 'shield_2';
   const item = { id: itemGenId(), type, acquiredDate: getToday() };
   itemInventory.push(item);
+  // 슬롯 여유 있으면 자동 장착
+  if (equippedItems.length < 2) {
+    equippedItems.push(item.id);
+  }
   saveItems();
   return item;
 }
