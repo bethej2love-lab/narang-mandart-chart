@@ -1590,6 +1590,7 @@ function calcStreak() {
   const shieldDays = getEquippedShieldDays();
   let shieldUsed = 0;
   let shieldLeft = shieldDays;
+  const protectedDays = []; // 방패로 보호한 날짜들
   const d = new Date(todayStr + 'T00:00:00');
   if (!todayDone) d.setDate(d.getDate() - 1);
   while (true) {
@@ -1600,14 +1601,19 @@ function calcStreak() {
     } else if (shieldLeft > 0) {
       shieldLeft--;
       shieldUsed++;
+      protectedDays.push(ds); // 방패로 보호된 날 기록
       d.setDate(d.getDate() - 1);
     } else {
       break;
     }
     if (streak > 365) break;
   }
-  // 실제로 방패가 쓰였으면 소모
-  if (shieldUsed > 0) consumeShields(shieldUsed);
+  // 방패가 쓰였으면 소모 + 보호한 날 streakHistory에 기록 (다음 호출 시 재소모 방지)
+  if (shieldUsed > 0) {
+    protectedDays.forEach(ds => { streakHistory[ds] = true; });
+    saveStreakHistory();
+    consumeShields(shieldUsed);
+  }
   return streak;
 }
 
@@ -2276,63 +2282,6 @@ function renderTriviaSection() {
   }
 }
 
-// ── Trivia 이력 관리 (중복 방지) ──
-function getTriviaHistory() {
-  try { return JSON.parse(localStorage.getItem('mandart_trivia_history')) || []; } catch(e) { return []; }
-}
-function saveTriviaHistory(text) {
-  const history = getTriviaHistory();
-  history.unshift(text.slice(0, 80));
-  localStorage.setItem('mandart_trivia_history', JSON.stringify(history.slice(0, 20)));
-}
-
-async function generateTrivia() {
-  const btn = document.getElementById('triviaBtn');
-  const triviaBox = document.getElementById('triviaBox');
-  if (!btn || !triviaBox) return;
-  btn.disabled = true;
-  btn.textContent = '발견하는 중...';
-  const areaId = getTriviaAreaId();
-  const topic = TRIVIA_TOPICS[areaId];
-  const history1 = getTriviaHistory();
-  const historyNote1 = history1.length > 0 ? `\n\n이미 전달한 내용 (절대 반복하지 말 것):\n${history1.map((h,i)=>`${i+1}. ${h}...`).join('\n')}` : '';
-  try {
-    const prompt = `${topic.prompt}를 알려줘.
-조건:
-- 진짜 흥미롭고 잘 알려지지 않은 사실이어야 함
-- 2~3문장으로 짧고 임팩트 있게
-- 접두어 없이 바로 내용만
-- 한국어로, 이모지 없이
-- 출처가 있다면 끝에 간략히 (예: — 하버드 연구, 2019)${historyNote1}`;
-    const res = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'x-api-key': getApiKey(), 'anthropic-version': '2023-06-01', 'anthropic-dangerous-direct-browser-access': 'true' },
-      body: JSON.stringify({ model: 'claude-sonnet-4-20250514', max_tokens: 800, messages: [{ role: 'user', content: prompt }] })
-    });
-    const data = await res.json();
-    if (!res.ok) { btn.disabled = false; btn.textContent = '✦ 오늘의 발견 열기'; return; }
-    const text = data.content?.[0]?.text || '';
-    if (!text) return;
-    saveTriviaHistory(text);
-    localStorage.setItem('mandart_trivia_cache', JSON.stringify({ date: getToday(), text, areaId }));
-    triviaBox.textContent = text;
-    triviaBox.style.display = 'block';
-    btn.style.display = 'none';
-    // 아이템 드롭 시도
-    const droppedItem = tryDropItem();
-    if (droppedItem) {
-      const info = ITEM_TYPES[droppedItem.type];
-      const isEquipped = equippedItems.includes(droppedItem.id);
-      const dropMsg = document.createElement('div');
-      dropMsg.style.cssText = 'margin-top:10px;padding:10px 14px;background:rgba(200,168,96,0.08);border:1px solid rgba(200,168,96,0.3);border-radius:8px;font-size:11px;color:#c8a860;text-align:center;';
-      dropMsg.textContent = `${info.emoji} 아이템 획득${isEquipped ? ' · 자동 장착됨' : ' (슬롯 꽉참)'}: ${info.name} — ${info.desc}`;
-      triviaBox.insertAdjacentElement('afterend', dropMsg);
-      renderItemSlots();
-    }
-    renderTriviaSection(); // 보너스 버튼 표시
-  } catch(e) { btn.disabled = false; btn.textContent = '✦ 오늘의 발견 열기'; }
-}
-
 // ── 아이템 시스템 ──
 const ITEM_TYPES = {
   shield_1: { name: '하루 방패', emoji: '🛡', desc: '스트릭이 하루 끊겨도 유지', days: 1 },
@@ -2499,6 +2448,63 @@ function showItemInventory() {
       showConfirm('이 아이템을 버릴까요?', () => { deleteItem(btn.dataset.id); overlay.remove(); if (itemInventory.length) showItemInventory(); });
     };
   });
+}
+
+// ── Trivia 이력 관리 (중복 방지) ──
+function getTriviaHistory() {
+  try { return JSON.parse(localStorage.getItem('mandart_trivia_history')) || []; } catch(e) { return []; }
+}
+function saveTriviaHistory(text) {
+  const history = getTriviaHistory();
+  history.unshift(text.slice(0, 80));
+  localStorage.setItem('mandart_trivia_history', JSON.stringify(history.slice(0, 20)));
+}
+
+async function generateTrivia() {
+  const btn = document.getElementById('triviaBtn');
+  const triviaBox = document.getElementById('triviaBox');
+  if (!btn || !triviaBox) return;
+  btn.disabled = true;
+  btn.textContent = '발견하는 중...';
+  const areaId = getTriviaAreaId();
+  const topic = TRIVIA_TOPICS[areaId];
+  const history1 = getTriviaHistory();
+  const historyNote1 = history1.length > 0 ? `\n\n이미 전달한 내용 (절대 반복하지 말 것):\n${history1.map((h,i)=>`${i+1}. ${h}...`).join('\n')}` : '';
+  try {
+    const prompt = `${topic.prompt}를 알려줘.
+조건:
+- 진짜 흥미롭고 잘 알려지지 않은 사실이어야 함
+- 2~3문장으로 짧고 임팩트 있게
+- 접두어 없이 바로 내용만
+- 한국어로, 이모지 없이
+- 출처가 있다면 끝에 간략히 (예: — 하버드 연구, 2019)${historyNote1}`;
+    const res = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-api-key': getApiKey(), 'anthropic-version': '2023-06-01', 'anthropic-dangerous-direct-browser-access': 'true' },
+      body: JSON.stringify({ model: 'claude-sonnet-4-20250514', max_tokens: 800, messages: [{ role: 'user', content: prompt }] })
+    });
+    const data = await res.json();
+    if (!res.ok) { btn.disabled = false; btn.textContent = '✦ 오늘의 발견 열기'; return; }
+    const text = data.content?.[0]?.text || '';
+    if (!text) return;
+    saveTriviaHistory(text);
+    localStorage.setItem('mandart_trivia_cache', JSON.stringify({ date: getToday(), text, areaId }));
+    triviaBox.textContent = text;
+    triviaBox.style.display = 'block';
+    btn.style.display = 'none';
+    // 아이템 드롭 시도
+    const droppedItem = tryDropItem();
+    if (droppedItem) {
+      const info = ITEM_TYPES[droppedItem.type];
+      const isEquipped = equippedItems.includes(droppedItem.id);
+      const dropMsg = document.createElement('div');
+      dropMsg.style.cssText = 'margin-top:10px;padding:10px 14px;background:rgba(200,168,96,0.08);border:1px solid rgba(200,168,96,0.3);border-radius:8px;font-size:11px;color:#c8a860;text-align:center;';
+      dropMsg.textContent = `${info.emoji} 아이템 획득${isEquipped ? ' · 자동 장착됨' : ' (슬롯 꽉참)'}: ${info.name} — ${info.desc}`;
+      triviaBox.insertAdjacentElement('afterend', dropMsg);
+      renderItemSlots();
+    }
+    renderTriviaSection(); // 보너스 버튼 표시
+  } catch(e) { btn.disabled = false; btn.textContent = '✦ 오늘의 발견 열기'; }
 }
 
 async function generateTrivia2() {
