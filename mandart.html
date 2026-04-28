@@ -1590,7 +1590,15 @@ function calcStreak() {
   const shieldDays = getEquippedShieldDays();
   let shieldUsed = 0;
   let shieldLeft = shieldDays;
-  const protectedDays = []; // 방패로 보호한 날짜들
+  const protectedDays = [];
+
+  // 방패 획득일 중 가장 최근 날짜 (이 날짜 이전엔 소급 불가)
+  const shieldAcquiredDate = equippedItems.reduce((latest, id) => {
+    const item = itemInventory.find(i => i.id === id);
+    if (!item) return latest;
+    return item.acquiredDate > latest ? item.acquiredDate : latest;
+  }, '0000-00-00');
+
   const d = new Date(todayStr + 'T00:00:00');
   if (!todayDone) d.setDate(d.getDate() - 1);
   while (true) {
@@ -1598,17 +1606,17 @@ function calcStreak() {
     if (isStreakDay(ds)) {
       streak++;
       d.setDate(d.getDate() - 1);
-    } else if (shieldLeft > 0) {
+    } else if (shieldLeft > 0 && ds >= shieldAcquiredDate) {
+      // 획득일 이후 날짜만 방패로 보호
       shieldLeft--;
       shieldUsed++;
-      protectedDays.push(ds); // 방패로 보호된 날 기록
+      protectedDays.push(ds);
       d.setDate(d.getDate() - 1);
     } else {
       break;
     }
     if (streak > 365) break;
   }
-  // 방패가 쓰였으면 소모 + 보호한 날 streakHistory에 기록 (다음 호출 시 재소모 방지)
   if (shieldUsed > 0) {
     protectedDays.forEach(ds => { streakHistory[ds] = true; });
     saveStreakHistory();
