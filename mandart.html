@@ -818,8 +818,25 @@ function getCellKey(r,c) { return `${r}_${c}`; }
 
 let customCycles = {};
 try { customCycles = JSON.parse(localStorage.getItem('mandart_custom_cycles')) || {}; } catch(e) {}
-let customLoggable = {};
-try { customLoggable = JSON.parse(localStorage.getItem('mandart_custom_loggable')) || {}; } catch(e) {}
+const DEFAULT_CUSTOM_LOGGABLE = {
+  '2_3': true,  // 독서 문장 수집
+  '4_0': true,  // 부기스
+  '4_1': true,  // 상담 자격증
+  '4_2': true,  // 업계 인물·기관 팔로우업
+  '4_3': true,  // 자격증
+  '4_4': true,  // 레퍼런스 수집
+  '4_5': true,  // AI 활용 프로젝트 기획
+  '4_6': true,  // 학점은행 강의 +
+  '4_7': true,  // Today I Learned
+  '5_4': true,  // 어닝콜 파악 IR보고서 읽기
+  '5_6': true,  // 투자 일기
+  '7_6': true,  // 악기 연습
+};
+let customLoggable = {...DEFAULT_CUSTOM_LOGGABLE};
+try {
+  const saved = JSON.parse(localStorage.getItem('mandart_custom_loggable'));
+  if (saved) customLoggable = {...DEFAULT_CUSTOM_LOGGABLE, ...saved};
+} catch(e) {}
 
 // streak용 날짜별 체크 이력 { "2026-03-17": true, "2026-03-18": true }
 let streakHistory = {};
