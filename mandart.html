@@ -748,16 +748,15 @@ function getApiKey() { return localStorage.getItem('mandart_api_key') || ''; }
 function saveApiKey(key) { localStorage.setItem('mandart_api_key', key.trim()); ANTHROPIC_API_KEY = key.trim(); }
 
 const areas = [
-  { id: 'a1', title: '인성\n품격', items: ['하루 1번\n감사 표현', '일상에서\n욕설하지\n않기', '상대 말\n끊지 않기', '약속 시간\n준수', '인사', '실수\n인정하고\n사과하기', '의식적으로\n배려\n행동하기', '하루 끝\n3분 성찰'] },
-  { id: 'a2', title: '자기관리\n루틴', items: ['평일 7:30\n주말 9시 기상', '평일 23:30\n주말 1시\n폰 내려두기', '할 일\n뽑기 완료', '일\n미루지 않기', '유튜브\n절제', '이부자리\n정리', '주간 회고\n(일요일)', '만다르트 계획\n잊지 않기'] },
-  { id: 'a3', title: '독서\n지식', items: ['매일\n책 읽기', '월 2권\n독서', '분기 1권\n벽돌책 읽기', '독서노트\n작성하기', '매일\nBrilliant 풀기', '영어공부\n앱 학습', '영어 콘텐츠\n하루 1개', '호기심\n깊게\n파고들기'] },
-  { id: 'a4', title: '체력\n건강', items: ['매일\n스트레칭', '물 하루\n1리터 이상', '걷기 하루\n8000보 이상', '달리기\n주 10km\n이상', '달리기\n월 50km\n이상', '음주\n월 5회 제한', '다리 찢기\n노력', '푸시업\n노력'] },
-  { id: 'a5', title: '커리어\n실력', items: ['부기스\n발전', '상담 자격증\n(임상심리사\n·청소년상담사)', '컴퓨터 자격증\n(컴활\n·정보처리기사)', '기타 자격증\n(지도사·운용사\n·중개사·분석사)', '노션\n활용', 'AI 활용\n프로젝트\n기획', '토익 900\n오픽 AL', '재능기부\n(봉사)'] },
-  { id: 'a6', title: '경제력\n재정', items: ['매일\n시황 파악', '포트폴리오\n월마다\n리밸런싱', '소비\n절제', '일희일비\n하지 않기', '분기별 재정\n목표 점검', '복리\n명심', '격월 투자\n책 1권', '매일 투자글\n1편 읽기'] },
-  { id: 'a7', title: '철학\n가치관', items: ['매일\n일기 쓰기', '월 1회\n감상문', '주 1회\n자유글', '욕심\n내지 않기', '원하면\n행동하기', '분기 1권\n철학책 읽기', '손웅정·아이유\n생각하기', 'Dune\n읽기'] },
-  { id: 'a8', title: '창의성\n예술', items: ['음악\n많이 듣기', '월 1회\n전시', '월 영화\n2편', '분기 1번\n극장', '연 3회\n공연', '한 줄\n코멘트', '악기\n연습', '사진·영상\n기록'] },
+  { id: 'a1', title: '인성\n품격', items: ['하루\n감사 표현', '일상에서\n욕설하지\n않기', '상대 말\n끊지 않기', '약속 시간\n준수', '인사', '하루 반성\n한줄', '부정적인 말\n의식적으로\n참기', '역지사지'] },
+  { id: 'a2', title: '자기관리\n루틴', items: ['평일 7:00\n주말 8시 기상', '평일 23:30\n주말 1시\n폰 내려두기', '냉장고 확인\n장 보기', '일\n미루지 않기', '유튜브\n절제', '이부자리\n정리', '돌돌이\n화장실\n물티슈', '속눈썹 영양제\n바디로션\n네일 향수'] },
+  { id: 'a3', title: '독서\n지식', items: ['매일\n책 읽기', '월 2권\n독서', '오늘 아침보다\n현명해졌나?', '독서\n문장 수집', '매일\nBrilliant 풀기', '말해보카\n+ 산타', '영어 콘텐츠\n토익 풀기', '호기심\n깊게\n파고들기'] },
+  { id: 'a4', title: '체력\n건강', items: ['매일\n스트레칭', '의식적으로 물\n많이 마시기', '걷기 하루\n8000보 이상', '달리기 일\n2km 이상', '달리기\n월 50km\n이상', '음주\n월 5회 제한', '다리 찢기\n노력', '푸시업\n노력'] },
+  { id: 'a5', title: '커리어\n실력', items: ['부기스\n(책 등록, 피드 업\n멀티 반응3+등)', '상담 자격증\n(임상심리사\n·청소년상담사)', '업계 인물·기관\n팔로우업', '자격증(지도사\n·운용사·중개사\n·분석사)', '레퍼런스 수집\n(좋은 기획 이유)', 'AI 활용\n프로젝트 기획', '학점은행\n강의 +', 'Today I\nLearned'] },
+  { id: 'a6', title: '경제력\n재정', items: ['매일\n시황 파악', '포트폴리오\n월마다\n리밸런싱', '소비\n절제', '일희일비\n하지 않기', '어닝콜 파악\nIR보고서 읽기', '복리\n명심', '투자 일기', '매일 투자글\n1편 읽기'] },
+  { id: 'a7', title: '철학\n가치관', items: ['매일\n일기 쓰기', '월 1회\n편지 쓰기', '주 1회\n블로그\n글쓰기', '욕심\n내지 않기', '원하면\n행동하기', '내로남불\n체크', '나는\n나의 손웅정', 'My Dune'] },
+  { id: 'a8', title: '창의성\n예술', items: ['새로운\n노래 듣기', '월 1회\n전시', '격주\n영화 1편', '플리 만들기\n(노래, 영상)', '낙서 드로잉', '한 줄\n코멘트', '악기\n연습', '사진·영상\n기록'] },
 ];
-
 const areaColorMap = {
   a1: { bg: '#12101c', hbg: '#1a1628', hcol: '#9080bc', tcol: '#a090cc' },
   a2: { bg: '#001a10', hbg: '#002a18', hcol: '#00c870', tcol: '#6abea0' },
@@ -832,6 +831,12 @@ const DEFAULT_CUSTOM_LOGGABLE = {
   '5_6': true,  // 투자 일기
   '7_6': true,  // 악기 연습
 };
+const AREAS_VERSION = 'v2026-05';
+// areas가 바뀌었으면 구 customLoggable 무시하고 기본값 사용
+if (localStorage.getItem('mandart_areas_version') !== AREAS_VERSION) {
+  localStorage.removeItem('mandart_custom_loggable');
+  localStorage.setItem('mandart_areas_version', AREAS_VERSION);
+}
 let customLoggable = {...DEFAULT_CUSTOM_LOGGABLE};
 try {
   const saved = JSON.parse(localStorage.getItem('mandart_custom_loggable'));
